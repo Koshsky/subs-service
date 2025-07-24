@@ -179,7 +179,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SubscriptionUpdate'
+              $ref: '#/components/schemas/Subscription'
       responses:
         '200':
           description: Подписка обновлена
@@ -329,37 +329,6 @@ components:
           pattern: '^\d{2}-\d{4}$'
           nullable: true
           description: Дата окончания в формате MM-YYYY (необязательное)
-          example: "12-2025"
-
-    SubscriptionUpdate:
-      type: object
-      description: Данные для обновления подписки
-      properties:
-        service_name:
-          type: string
-          minLength: 2
-          description: Новое название сервиса подписки
-          example: "Yandex Plus++"
-        price:
-          type: integer
-          minimum: 1
-          description: Новая стоимость подписки в рублях
-          example: 450
-        user_id:
-          type: string
-          format: uuid
-          description: Новый идентификатор пользователя
-          example: "60601fee-2bf1-4721-ae6f-7636e79a0cba"
-        start_date:
-          type: string
-          pattern: '^\d{2}-\d{4}$'
-          description: Новая дата начала в формате MM-YYYY
-          example: "07-2025"
-        end_date:
-          type: string
-          pattern: '^\d{2}-\d{4}$'
-          nullable: true
-          description: Новая дата окончания в формате MM-YYYY (null для удаления)
           example: "12-2025"
 
     Error:

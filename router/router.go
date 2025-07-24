@@ -5,18 +5,16 @@ import (
 	"github.com/Koshsky/subs-service/middleware"
 	"github.com/Koshsky/subs-service/services"
 	"github.com/gin-gonic/gin"
-	"github.com/jmoiron/sqlx"
+	"gorm.io/gorm"
 )
 
-func SetupRouter(db *sqlx.DB) *gin.Engine {
-	r := gin.New()
+func SetupRouter(r *gin.Engine, db *gorm.DB) {
 	r.Use(middleware.RateLimiterMiddleware())
 	r.Use(middleware.RequestLoggerMiddleware())
 	// r.Use(middleware.RequestBodyLoggerMiddleware()) // for debugging
 	r.Use(middleware.DatabaseLoggerMiddleware())
 
-	repo := services.NewPostgresRepo(db)
-	service := services.NewSubscriptionService(repo)
+	service := services.NewSubscriptionService(db)
 	controller := controllers.NewSubscriptionController(service)
 
 	r.GET("/subscriptions", controller.List)
@@ -25,5 +23,4 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
 	r.PUT("/subscriptions/:id", controller.Update)
 	r.DELETE("/subscriptions/:id", controller.Delete)
 	r.GET("/subscriptions/total", controller.SumPrice)
-	return r
 }

@@ -27,7 +27,8 @@ func (c *SubscriptionController) Create(ctx *gin.Context) {
 		})
 		return
 	}
-	if err := c.service.CreateSub(ctx, &sub); err != nil {
+	sub, err := c.service.CreateSub(sub)
+	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Error{
 			Error:   "failed to create subscription",
 			Code:    models.ErrCodeDatabaseOperation,
@@ -49,7 +50,7 @@ func (c *SubscriptionController) Get(ctx *gin.Context) {
 		})
 		return
 	}
-	sub, err := c.service.GetSub(ctx, id)
+	sub, err := c.service.GetSub(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, models.Error{
 			Error:   "not found",
@@ -72,7 +73,7 @@ func (c *SubscriptionController) Update(ctx *gin.Context) {
 		return
 	}
 
-	var inputSub models.SubscriptionUpdate
+	var inputSub models.Subscription
 	if err := ctx.ShouldBindJSON(&inputSub); err != nil {
 		ctx.JSON(http.StatusBadRequest, models.Error{
 			Error:   "invalid request body",
@@ -82,7 +83,7 @@ func (c *SubscriptionController) Update(ctx *gin.Context) {
 		return
 	}
 
-	updatedSub, err := c.service.UpdateSub(ctx, id, inputSub)
+	updatedSub, err := c.service.UpdateSub(id, inputSub)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Error{
 			Error:   "failed to update subscription",
@@ -96,7 +97,7 @@ func (c *SubscriptionController) Update(ctx *gin.Context) {
 }
 
 func (c *SubscriptionController) List(ctx *gin.Context) {
-	subs, err := c.service.GetAllSubs(ctx)
+	subs, err := c.service.GetAllSubs()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Error{
 			Error:   "failed to get subscriptions",
@@ -121,7 +122,7 @@ func (c *SubscriptionController) Delete(ctx *gin.Context) {
 		})
 		return
 	}
-	if err := c.service.DeleteSub(ctx, id); err != nil {
+	if err := c.service.DeleteSub(id); err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Error{
 			Error:   "failed to delete subscription",
 			Code:    models.ErrCodeDatabaseOperation,
@@ -134,7 +135,7 @@ func (c *SubscriptionController) Delete(ctx *gin.Context) {
 }
 
 func (c *SubscriptionController) SumPrice(ctx *gin.Context) {
-	var req models.SumPriceParams
+	var req models.SubscriptionFilter
 
 	req.UserID = ctx.Query("user_id")
 	req.Service = ctx.Query("service")
@@ -159,7 +160,7 @@ func (c *SubscriptionController) SumPrice(ctx *gin.Context) {
 		return
 	}
 
-	sum, err := c.service.SumPrice(ctx, req)
+	sum, err := c.service.SumPrice(req)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Error{
 			Error:   "failed to calculate total price",
