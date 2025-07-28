@@ -9,12 +9,12 @@ import (
 	"github.com/Koshsky/subs-service/middleware"
 	"github.com/Koshsky/subs-service/services"
 	"github.com/gin-gonic/gin"
-	"github.com/jmoiron/sqlx"
+	"gorm.io/gorm"
 )
 
 var pprofPath = "/internal/debug/pprof"
 
-func SetupRouter(db *sqlx.DB, routerCfg *config.RouterConfig) *gin.Engine {
+func SetupRouter(db *gorm.DB, routerCfg *config.RouterConfig) *gin.Engine {
 	r := gin.New()
 
 	middleware.SetupMiddleware(r, &routerCfg.Middleware)
@@ -35,9 +35,8 @@ func SetupRouter(db *sqlx.DB, routerCfg *config.RouterConfig) *gin.Engine {
 	return r
 }
 
-func initController(db *sqlx.DB) *controllers.SubscriptionController {
-	repo := services.NewPostgresRepo(db)
-	service := services.NewSubscriptionService(repo)
+func initController(db *gorm.DB) *controllers.SubscriptionController {
+	service := services.NewSubscriptionService(db)
 	return controllers.NewSubscriptionController(service)
 }
 

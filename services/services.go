@@ -1,41 +1,52 @@
 package services
 
 import (
-	"context"
-
 	"github.com/Koshsky/subs-service/models"
+	"gorm.io/gorm"
+
+	"github.com/Koshsky/subs-service/repositories/sub_repository"
 )
 
 // SubscriptionService provides business logic for subscriptions
 // and delegates data access to the repository layer.
 type SubscriptionService struct {
-	repo SubscriptionRepo
+	repo *gorm.DB
 }
 
-func NewSubscriptionService(repo SubscriptionRepo) *SubscriptionService {
+func NewSubscriptionService(repo *gorm.DB) *SubscriptionService {
 	return &SubscriptionService{repo: repo}
 }
 
-func (s *SubscriptionService) SumPrice(ctx context.Context, params models.SumPriceParams) (float64, error) {
-	return s.repo.SumPrice(ctx, params)
+func (s *SubscriptionService) CreateSub(sub models.Subscription) (models.Subscription, error) {
+	return sub_repository.CreateSubscription(s.repo, sub)
 }
 
-func (s *SubscriptionService) CreateSub(ctx context.Context, sub *models.Subscription) error {
-	return s.repo.Create(ctx, sub)
+func (s *SubscriptionService) GetSub(id int) (models.Subscription, error) {
+	return sub_repository.GetSubscriptionByID(s.repo, id)
 }
 
-func (s *SubscriptionService) GetSub(ctx context.Context, id int) (*models.Subscription, error) {
-	return s.repo.GetByID(ctx, id)
+func (s *SubscriptionService) GetAllSubs() ([]models.Subscription, error) {
+	return sub_repository.GetAllSubscriptions(s.repo)
 }
 
-func (s *SubscriptionService) GetAllSubs(ctx context.Context) ([]models.Subscription, error) {
-	return s.repo.GetAll(ctx)
+func (s *SubscriptionService) UpdateSub(id int, update models.Subscription) (models.Subscription, error) {
+	return sub_repository.UpdateSubscription(s.repo, id, update)
 }
 
-func (s *SubscriptionService) UpdateSub(ctx context.Context, id int, update models.SubscriptionUpdate) (*models.Subscription, error) {
-	return s.repo.Update(ctx, id, update)
+func (s *SubscriptionService) DeleteSub(id int) error {
+	return sub_repository.DeleteSubscription(s.repo, id)
 }
 
-func (s *SubscriptionService) DeleteSub(ctx context.Context, id int) error {
-	return s.repo.Delete(ctx, id)
+func (s *SubscriptionService) SumPrice(params models.SubscriptionFilter) (int, error) {
+	subs, err := sub_repository.GetSubscriptionsByFilters(s.repo, params)
+	if err != nil {
+		return 0, err
+	}
+
+	var total int
+	for _, sub := range subs {
+		total += sub.Price
+	}
+
+	return total, nil
 }
