@@ -1,44 +1,43 @@
 package services
 
 import (
-	"github.com/Koshsky/subs-service/models"
-	"gorm.io/gorm"
+	"github.com/Koshsky/subs-service/internal/models"
 
-	"github.com/Koshsky/subs-service/repositories/sub_repository"
+	"github.com/Koshsky/subs-service/internal/repositories"
 )
 
 // SubscriptionService provides business logic for subscriptions
 // and delegates data access to the repository layer.
 type SubscriptionService struct {
-	repo *gorm.DB
+	repo repositories.SubscriptionRepository
 }
 
-func NewSubscriptionService(repo *gorm.DB) *SubscriptionService {
+func New(repo repositories.SubscriptionRepository) *SubscriptionService {
 	return &SubscriptionService{repo: repo}
 }
 
 func (s *SubscriptionService) CreateSub(sub models.Subscription) (models.Subscription, error) {
-	return sub_repository.CreateSubscription(s.repo, sub)
+	return s.repo.CreateSubscription(sub)
 }
 
 func (s *SubscriptionService) GetSub(id int) (models.Subscription, error) {
-	return sub_repository.GetSubscriptionByID(s.repo, id)
+	return s.repo.GetSubscriptionByID(id)
 }
 
 func (s *SubscriptionService) GetAllSubs() ([]models.Subscription, error) {
-	return sub_repository.GetAllSubscriptions(s.repo)
+	return s.repo.GetAllSubscriptions()
 }
 
 func (s *SubscriptionService) UpdateSub(id int, update models.Subscription) (models.Subscription, error) {
-	return sub_repository.UpdateSubscription(s.repo, id, update)
+	return s.repo.UpdateSubscription(id, update)
 }
 
 func (s *SubscriptionService) DeleteSub(id int) error {
-	return sub_repository.DeleteSubscription(s.repo, id)
+	return s.repo.DeleteSubscription(id)
 }
 
 func (s *SubscriptionService) SumPrice(params models.SubscriptionFilter) (int, error) {
-	subs, err := sub_repository.GetSubscriptionsByFilters(s.repo, params)
+	subs, err := s.repo.GetSubscriptionsByFilters(params)
 	if err != nil {
 		return 0, err
 	}

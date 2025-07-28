@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Koshsky/subs-service/models"
-	"github.com/Koshsky/subs-service/services"
+	"github.com/Koshsky/subs-service/internal/models"
+	"github.com/Koshsky/subs-service/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,7 +13,7 @@ type SubscriptionController struct {
 	service *services.SubscriptionService
 }
 
-func NewSubscriptionController(service *services.SubscriptionService) *SubscriptionController {
+func New(service *services.SubscriptionService) *SubscriptionController {
 	return &SubscriptionController{service: service}
 }
 

@@ -3,14 +3,17 @@ package main
 import (
 	"log"
 
-	"github.com/Koshsky/subs-service/config"
-	"github.com/Koshsky/subs-service/repositories/db"
-	"github.com/Koshsky/subs-service/router"
-	"github.com/Koshsky/subs-service/utils"
+	"github.com/Koshsky/subs-service/internal/config"
+	"github.com/Koshsky/subs-service/internal/repositories"
+	"github.com/Koshsky/subs-service/internal/repositories/db"
+	"github.com/Koshsky/subs-service/internal/router"
+	"github.com/Koshsky/subs-service/internal/utils"
 	_ "github.com/lib/pq"
 )
 
 func main() {
+	utils.RegisterCustomValidations()
+
 	appConfig, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
@@ -18,10 +21,9 @@ func main() {
 
 	database := db.ConnectDatabase(appConfig.DB)
 	// defer database.Close()
+	repo := repositories.New(database)
 
-	utils.RegisterCustomValidations()
-
-	r := router.SetupRouter(database, appConfig.Router)
+	r := router.SetupRouter(repo, appConfig.Router)
 
 	log.Println("Starting server on :8080")
 	r.Run()

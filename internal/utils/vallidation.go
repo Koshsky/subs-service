@@ -4,7 +4,7 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/Koshsky/subs-service/models"
+	"github.com/Koshsky/subs-service/internal/models"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
