@@ -17,7 +17,7 @@ const (
 	BurstLimit        = 2 // Допускаем кратковременные всплески
 )
 
-func RateLimiterMiddleware() gin.HandlerFunc {
+func RateLimiter() gin.HandlerFunc {
 	lmt := tollbooth.NewLimiter(RequestsPerSecond, &limiter.ExpirableOptions{
 		DefaultExpirationTTL: time.Minute,
 	})

@@ -3,8 +3,33 @@ package middleware
 import (
 	"net/http"
 
+	"github.com/Koshsky/subs-service/config"
 	"github.com/fatih/color"
+	"github.com/gin-gonic/gin"
 )
+
+func SetupMiddleware(r *gin.Engine, cfg *config.MiddlewareConfig) {
+	if cfg == nil {
+		return
+	}
+
+	// Обязательные middleware
+	r.Use(gin.Recovery())
+
+	// Опциональные middleware
+	if cfg.RateLimiterEnabled {
+		r.Use(RateLimiter())
+	}
+	if cfg.RequestLoggerEnabled {
+		r.Use(RequestLogger())
+	}
+	if cfg.BodyLoggerEnabled {
+		r.Use(BodyLogger())
+	}
+	if cfg.DatabaseLoggerEnabled {
+		r.Use(DatabaseLogger())
+	}
+}
 
 func colorForStatus(code int) string {
 	switch {

@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func DatabaseLoggerMiddleware() gin.HandlerFunc {
+func DatabaseLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
 

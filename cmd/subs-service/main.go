@@ -17,24 +17,25 @@ import (
 )
 
 func main() {
-	dbConfig, err := config.LoadDBConfig()
+	appConfig, err := config.LoadConfig()
+
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	db, err := sqlx.Connect("postgres", dbConfig.ConnectionString())
+	db, err := sqlx.Connect("postgres", appConfig.DB.ConnectionString())
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
 
-	if err := applyMigrations(dbConfig); err != nil {
+	if err := applyMigrations(appConfig.DB); err != nil {
 		log.Fatalf("Failed to apply migrations: %v", err)
 	}
 
 	utils.RegisterCustomValidations()
 
-	r := router.SetupRouter(db)
+	r := router.SetupRouter(db, appConfig.Router)
 
 	log.Println("Starting server on :8080")
 	server := &http.Server{
