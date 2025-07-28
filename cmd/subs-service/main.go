@@ -7,7 +7,6 @@ import (
 	"github.com/Koshsky/subs-service/repositories/db"
 	"github.com/Koshsky/subs-service/router"
 	"github.com/Koshsky/subs-service/utils"
-	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
 
@@ -22,8 +21,7 @@ func main() {
 
 	utils.RegisterCustomValidations()
 
-	r := gin.New()
-	router.SetupRouter(database, appConfig.Router)
+	r := router.SetupRouter(database, appConfig.Router)
 
 	log.Println("Starting server on :8080")
 	r.Run()
