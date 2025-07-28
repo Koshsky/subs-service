@@ -11,13 +11,19 @@ import (
 )
 
 func main() {
+	appConfig, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+  
 	database := db.ConnectDatabase()
 	// defer database.Close()
 
 	utils.RegisterCustomValidations()
 
 	r := gin.New()
-	router.SetupRouter(r, database)
+	router.SetupRouter(database)
+
 
 	log.Println("Starting server on :8080")
 	r.Run()

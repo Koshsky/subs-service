@@ -4,12 +4,14 @@ RUN apk add --no-cache git libc6-compat
 
 WORKDIR /app
 
+COPY go.mod go.sum ./
+
+RUN go mod download
+
 COPY . .
 
-RUN go mod tidy && \
-    CGO_ENABLED=0 go build -o /app/subs-service /app/cmd/subs-service/main.go
-
-RUN chmod +x /app/subs-service
+RUN CGO_ENABLED=0 go build -o /app/subs-service /app/cmd/subs-service/main.go && \
+    chmod +x /app/subs-service
 
 EXPOSE 8080
 

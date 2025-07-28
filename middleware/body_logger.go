@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RequestBodyLoggerMiddleware() gin.HandlerFunc {
+func BodyLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.Method == "POST" || c.Request.Method == "PUT" {
 			body, _ := io.ReadAll(c.Request.Body)
