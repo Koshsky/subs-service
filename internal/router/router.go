@@ -4,22 +4,22 @@ import (
 	"net/http"
 	"net/http/pprof"
 
-	"github.com/Koshsky/subs-service/config"
-	"github.com/Koshsky/subs-service/controllers"
-	"github.com/Koshsky/subs-service/middleware"
-	"github.com/Koshsky/subs-service/services"
+	"github.com/Koshsky/subs-service/internal/config"
+	"github.com/Koshsky/subs-service/internal/controllers"
+	"github.com/Koshsky/subs-service/internal/middleware"
+	"github.com/Koshsky/subs-service/internal/repositories"
+	"github.com/Koshsky/subs-service/internal/services"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 var pprofPath = "/internal/debug/pprof"
 
-func SetupRouter(db *gorm.DB, routerCfg *config.RouterConfig) *gin.Engine {
+func SetupRouter(repo repositories.SubscriptionRepository, routerCfg *config.RouterConfig) *gin.Engine {
 	r := gin.New()
 
 	middleware.SetupMiddleware(r, &routerCfg.Middleware)
 
-	controller := initController(db)
+	controller := initController(repo)
 
 	r.GET("/subscriptions", controller.List)
 	r.POST("/subscriptions", controller.Create)
@@ -35,9 +35,9 @@ func SetupRouter(db *gorm.DB, routerCfg *config.RouterConfig) *gin.Engine {
 	return r
 }
 
-func initController(db *gorm.DB) *controllers.SubscriptionController {
-	service := services.NewSubscriptionService(db)
-	return controllers.NewSubscriptionController(service)
+func initController(repo repositories.SubscriptionRepository) *controllers.SubscriptionController {
+	service := services.New(repo)
+	return controllers.New(service)
 }
 
 func registerPprofHandlers(r *gin.Engine) {

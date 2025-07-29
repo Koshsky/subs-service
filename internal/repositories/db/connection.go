@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/Koshsky/subs-service/config"
+	"github.com/Koshsky/subs-service/internal/config"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // Драйвер для PostgreSQL
 	_ "github.com/golang-migrate/migrate/v4/source/file"       // Драйвер для файловых миграций

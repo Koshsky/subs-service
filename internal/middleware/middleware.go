@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/Koshsky/subs-service/config"
+	"github.com/Koshsky/subs-service/internal/config"
 	"github.com/fatih/color"
 	"github.com/gin-gonic/gin"
 )
