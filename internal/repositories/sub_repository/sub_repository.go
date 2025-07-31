@@ -5,10 +5,16 @@ import (
 	"gorm.io/gorm"
 )
 
-func GetSubscriptionsByFilters(db *gorm.DB, params models.SubscriptionFilter) ([]models.Subscription, error) {
+type SubRepository struct{ DB *gorm.DB }
+
+func New(db *gorm.DB) *SubRepository {
+	return &SubRepository{DB: db}
+}
+
+func (sr *SubRepository) GetBySubscriptionFilter(params models.SubscriptionFilter) ([]models.Subscription, error) {
 	var subs []models.Subscription
 
-	query := db.Model(&models.Subscription{}).
+	query := sr.DB.Model(&models.Subscription{}).
 		Where("start_date BETWEEN ? AND ?",
 			params.StartMonth.Time(),
 			params.EndMonth.Time().AddDate(0, 1, -1)) // До конца месяца
@@ -24,34 +30,34 @@ func GetSubscriptionsByFilters(db *gorm.DB, params models.SubscriptionFilter) ([
 	return subs, err
 }
 
-func GetAllSubscriptions(db *gorm.DB) ([]models.Subscription, error) {
+func (sr *SubRepository) GetAll() ([]models.Subscription, error) {
 	var subs []models.Subscription
-	result := db.Find(&subs)
+	result := sr.DB.Find(&subs)
 	return subs, result.Error
 }
 
-func GetSubscriptionByID(db *gorm.DB, id int) (models.Subscription, error) {
+func (sr *SubRepository) GetByID(id int) (models.Subscription, error) {
 	var sub models.Subscription
-	result := db.First(&sub, id)
+	result := sr.DB.First(&sub, id)
 	return sub, result.Error
 }
 
-func CreateSubscription(db *gorm.DB, sub models.Subscription) (models.Subscription, error) {
-	result := db.Create(&sub)
+func (sr *SubRepository) Create(sub models.Subscription) (models.Subscription, error) {
+	result := sr.DB.Create(&sub)
 	return sub, result.Error
 }
 
-func UpdateSubscription(db *gorm.DB, id int, updatedSub models.Subscription) (models.Subscription, error) {
+func (sr *SubRepository) UpdateByID(id int, updatedSub models.Subscription) (models.Subscription, error) {
 	var sub models.Subscription
-	if err := db.First(&sub, id).Error; err != nil {
+	if err := sr.DB.First(&sub, id).Error; err != nil {
 		return sub, err
 	}
 
-	result := db.Model(&sub).Updates(updatedSub)
+	result := sr.DB.Model(&sub).Updates(updatedSub)
 	return sub, result.Error
 }
 
-func DeleteSubscription(db *gorm.DB, id int) error {
-	result := db.Delete(&models.Subscription{}, id)
+func (sr *SubRepository) DeletByID(id int) error {
+	result := sr.DB.Delete(&models.Subscription{}, id)
 	return result.Error
 }

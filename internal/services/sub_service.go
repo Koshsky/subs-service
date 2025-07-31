@@ -3,31 +3,36 @@ package services
 import (
 	"github.com/Koshsky/subs-service/internal/models"
 	"github.com/Koshsky/subs-service/internal/repositories/sub_repository"
-	"gorm.io/gorm"
 )
 
-func CreateSub(db *gorm.DB, sub models.Subscription) (models.Subscription, error) {
-	return sub_repository.CreateSubscription(db, sub)
+type SubService struct{ SubRepo *sub_repository.SubRepository }
+
+func NewSubService(repo *sub_repository.SubRepository) *SubService {
+	return &SubService{SubRepo: repo}
 }
 
-func GetSub(db *gorm.DB, id int) (models.Subscription, error) {
-	return sub_repository.GetSubscriptionByID(db, id)
+func (s *SubService) Create(sub models.Subscription) (models.Subscription, error) {
+	return s.SubRepo.Create(sub)
 }
 
-func GetAllSubs(db *gorm.DB) ([]models.Subscription, error) {
-	return sub_repository.GetAllSubscriptions(db)
+func (s *SubService) GetByID(id int) (models.Subscription, error) {
+	return s.SubRepo.GetByID(id)
 }
 
-func UpdateSub(db *gorm.DB, id int, update models.Subscription) (models.Subscription, error) {
-	return sub_repository.UpdateSubscription(db, id, update)
+func (s *SubService) GetAll() ([]models.Subscription, error) {
+	return s.SubRepo.GetAll()
 }
 
-func DeleteSub(db *gorm.DB, id int) error {
-	return sub_repository.DeleteSubscription(db, id)
+func (s *SubService) UpdateByID(id int, update models.Subscription) (models.Subscription, error) {
+	return s.SubRepo.UpdateByID(id, update)
 }
 
-func SumPrice(db *gorm.DB, params models.SubscriptionFilter) (int, error) {
-	subs, err := sub_repository.GetSubscriptionsByFilters(db, params)
+func (s *SubService) DeleteByID(id int) error {
+	return s.SubRepo.DeletByID(id)
+}
+
+func (s *SubService) SumPrice(params models.SubscriptionFilter) (int, error) {
+	subs, err := s.SubRepo.GetBySubscriptionFilter(params)
 	if err != nil {
 		return 0, err
 	}

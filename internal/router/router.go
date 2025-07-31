@@ -6,25 +6,36 @@ import (
 
 	"github.com/Koshsky/subs-service/internal/config"
 	"github.com/Koshsky/subs-service/internal/controllers"
+	"github.com/Koshsky/subs-service/internal/repositories/sub_repository"
+	"github.com/Koshsky/subs-service/internal/services"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 var pprofPath = "/internal/debug/pprof"
 
-func RegisterRoutes(r *gin.Engine, db *gorm.DB, cfg *config.RouterConfig) {
-
-	r.GET("/subscriptions", controllers.List(db))
-	r.POST("/subscriptions", controllers.Create(db))
-	r.GET("/subscriptions/:id", controllers.Get(db))
-	r.PUT("/subscriptions/:id", controllers.Update(db))
-	r.DELETE("/subscriptions/:id", controllers.Delete(db))
-	r.GET("/subscriptions/total", controllers.SumPrice(db))
+func RegisterRoutes(r *gin.Engine, conn *gorm.DB, cfg *config.RouterConfig) {
 	r.GET("/health", healthCheck)
+
+	registerSubHandlers(r, conn)
 
 	if cfg.EnableProfiling {
 		registerPprofHandlers(r)
 	}
+}
+
+func registerSubHandlers(r *gin.Engine, conn *gorm.DB) {
+	repo := sub_repository.New(conn)
+	service := services.NewSubService(repo)
+	subController := controllers.NewSubscriptionController(service)
+
+	r.GET("/subscriptions", subController.List)
+	r.POST("/subscriptions", subController.Create)
+	r.GET("/subscriptions/:id", subController.Get)
+	r.PUT("/subscriptions/:id", subController.Update)
+	r.DELETE("/subscriptions/:id", subController.Delete)
+	r.GET("/subscriptions/total", subController.SumPrice)
+
 }
 
 func registerPprofHandlers(r *gin.Engine) {
