@@ -1,7 +1,9 @@
 package models
 
+import "gorm.io/gorm"
+
 type Subscription struct {
-	ID        int        `json:"id" gorm:"primaryKey"`
+	gorm.Model
 	Service   string     `json:"service_name" gorm:"column:service_name" binding:"required,min=2"`
 	Price     int        `json:"price" gorm:"column:price" binding:"required,min=1"`
 	UserID    string     `json:"user_id" gorm:"column:user_id" binding:"required,uuid"`
