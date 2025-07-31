@@ -29,13 +29,15 @@ func registerSubHandlers(r *gin.Engine, conn *gorm.DB) {
 	service := services.NewSubscriptionService(repo)
 	subController := controllers.NewSubscriptionController(service)
 
-	r.GET("/subscriptions", subController.List)
-	r.POST("/subscriptions", subController.Create)
-	r.GET("/subscriptions/:id", subController.Get)
-	r.PUT("/subscriptions/:id", subController.Update)
-	r.DELETE("/subscriptions/:id", subController.Delete)
-	r.GET("/subscriptions/total", subController.SumPrice)
-
+	subs := r.Group("/subscriptions")
+	{
+		subs.GET("", subController.List)
+		subs.POST("", subController.Create)
+		subs.GET("/:id", subController.Get)
+		subs.PUT("/:id", subController.Update)
+		subs.DELETE("/:id", subController.Delete)
+		subs.GET("/total", subController.SumPrice)
+	}
 }
 
 func registerPprofHandlers(r *gin.Engine) {
