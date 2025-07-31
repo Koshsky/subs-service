@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"io/fs"
 	"os"
 	"strconv"
 
@@ -16,7 +18,11 @@ type AppConfig struct {
 func LoadConfig() (*AppConfig, error) {
 	err := godotenv.Load()
 	if err != nil {
-		return nil, err
+		if _, ok := err.(*fs.PathError); ok {
+			// Return both config and a sentinel error that can be checked by caller if needed
+			return loadAppConfig(), fmt.Errorf("proceeding without .env file: %w", err)
+		}
+		return nil, fmt.Errorf("failed to load .env file: %w", err)
 	}
 	return loadAppConfig(), nil
 }

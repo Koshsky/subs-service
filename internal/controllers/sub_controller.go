@@ -9,9 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type SubscriptionController struct{ SubService *services.SubService }
+type SubscriptionController struct{ SubService *services.SubscriptionService }
 
-func NewSubscriptionController(service *services.SubService) *SubscriptionController {
+func NewSubscriptionController(service *services.SubscriptionService) *SubscriptionController {
 	return &SubscriptionController{SubService: service}
 }
 

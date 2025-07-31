@@ -5,13 +5,13 @@ import (
 	"gorm.io/gorm"
 )
 
-type SubRepository struct{ DB *gorm.DB }
+type SubscriptionRepository struct{ DB *gorm.DB }
 
-func New(db *gorm.DB) *SubRepository {
-	return &SubRepository{DB: db}
+func New(db *gorm.DB) *SubscriptionRepository {
+	return &SubscriptionRepository{DB: db}
 }
 
-func (sr *SubRepository) GetBySubscriptionFilter(params models.SubscriptionFilter) ([]models.Subscription, error) {
+func (sr *SubscriptionRepository) GetBySubscriptionFilter(params models.SubscriptionFilter) ([]models.Subscription, error) {
 	var subs []models.Subscription
 
 	query := sr.DB.Model(&models.Subscription{}).
@@ -30,24 +30,24 @@ func (sr *SubRepository) GetBySubscriptionFilter(params models.SubscriptionFilte
 	return subs, err
 }
 
-func (sr *SubRepository) GetAll() ([]models.Subscription, error) {
+func (sr *SubscriptionRepository) GetAll() ([]models.Subscription, error) {
 	var subs []models.Subscription
 	result := sr.DB.Find(&subs)
 	return subs, result.Error
 }
 
-func (sr *SubRepository) GetByID(id int) (models.Subscription, error) {
+func (sr *SubscriptionRepository) GetByID(id int) (models.Subscription, error) {
 	var sub models.Subscription
 	result := sr.DB.First(&sub, id)
 	return sub, result.Error
 }
 
-func (sr *SubRepository) Create(sub models.Subscription) (models.Subscription, error) {
+func (sr *SubscriptionRepository) Create(sub models.Subscription) (models.Subscription, error) {
 	result := sr.DB.Create(&sub)
 	return sub, result.Error
 }
 
-func (sr *SubRepository) UpdateByID(id int, updatedSub models.Subscription) (models.Subscription, error) {
+func (sr *SubscriptionRepository) UpdateByID(id int, updatedSub models.Subscription) (models.Subscription, error) {
 	var sub models.Subscription
 	if err := sr.DB.First(&sub, id).Error; err != nil {
 		return sub, err
@@ -57,7 +57,7 @@ func (sr *SubRepository) UpdateByID(id int, updatedSub models.Subscription) (mod
 	return sub, result.Error
 }
 
-func (sr *SubRepository) DeletByID(id int) error {
+func (sr *SubscriptionRepository) DeleteByID(id int) error {
 	result := sr.DB.Delete(&models.Subscription{}, id)
 	return result.Error
 }

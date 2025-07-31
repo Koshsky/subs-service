@@ -26,7 +26,7 @@ func RegisterRoutes(r *gin.Engine, conn *gorm.DB, cfg *config.RouterConfig) {
 
 func registerSubHandlers(r *gin.Engine, conn *gorm.DB) {
 	repo := sub_repository.New(conn)
-	service := services.NewSubService(repo)
+	service := services.NewSubscriptionService(repo)
 	subController := controllers.NewSubscriptionController(service)
 
 	r.GET("/subscriptions", subController.List)

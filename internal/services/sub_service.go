@@ -5,33 +5,35 @@ import (
 	"github.com/Koshsky/subs-service/internal/repositories/sub_repository"
 )
 
-type SubService struct{ SubRepo *sub_repository.SubRepository }
-
-func NewSubService(repo *sub_repository.SubRepository) *SubService {
-	return &SubService{SubRepo: repo}
+type SubscriptionService struct {
+	SubRepo *sub_repository.SubscriptionRepository
 }
 
-func (s *SubService) Create(sub models.Subscription) (models.Subscription, error) {
+func NewSubscriptionService(repo *sub_repository.SubscriptionRepository) *SubscriptionService {
+	return &SubscriptionService{SubRepo: repo}
+}
+
+func (s *SubscriptionService) Create(sub models.Subscription) (models.Subscription, error) {
 	return s.SubRepo.Create(sub)
 }
 
-func (s *SubService) GetByID(id int) (models.Subscription, error) {
+func (s *SubscriptionService) GetByID(id int) (models.Subscription, error) {
 	return s.SubRepo.GetByID(id)
 }
 
-func (s *SubService) GetAll() ([]models.Subscription, error) {
+func (s *SubscriptionService) GetAll() ([]models.Subscription, error) {
 	return s.SubRepo.GetAll()
 }
 
-func (s *SubService) UpdateByID(id int, update models.Subscription) (models.Subscription, error) {
+func (s *SubscriptionService) UpdateByID(id int, update models.Subscription) (models.Subscription, error) {
 	return s.SubRepo.UpdateByID(id, update)
 }
 
-func (s *SubService) DeleteByID(id int) error {
-	return s.SubRepo.DeletByID(id)
+func (s *SubscriptionService) DeleteByID(id int) error {
+	return s.SubRepo.DeleteByID(id)
 }
 
-func (s *SubService) SumPrice(params models.SubscriptionFilter) (int, error) {
+func (s *SubscriptionService) SumPrice(params models.SubscriptionFilter) (int, error) {
 	subs, err := s.SubRepo.GetBySubscriptionFilter(params)
 	if err != nil {
 		return 0, err
