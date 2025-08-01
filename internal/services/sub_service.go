@@ -18,19 +18,19 @@ func (s *SubscriptionService) Create(sub models.Subscription) (models.Subscripti
 }
 
 func (s *SubscriptionService) GetByID(id int) (models.Subscription, error) {
-	return s.SubRepo.GetByID(id)
+	return s.SubRepo.GetByID(uint(id))
 }
 
-func (s *SubscriptionService) GetAll() ([]models.Subscription, error) {
-	return s.SubRepo.GetAll()
+func (s *SubscriptionService) GetUserSubscriptions(userID int) ([]models.Subscription, error) {
+	return s.SubRepo.GetUserSubscriptions(uint(userID))
 }
 
 func (s *SubscriptionService) UpdateByID(id int, update models.Subscription) (models.Subscription, error) {
-	return s.SubRepo.UpdateByID(id, update)
+	return s.SubRepo.UpdateByID(uint(id), update)
 }
 
 func (s *SubscriptionService) DeleteByID(id int) error {
-	return s.SubRepo.DeleteByID(id)
+	return s.SubRepo.DeleteByID(uint(id))
 }
 
 func (s *SubscriptionService) SumPrice(params models.SubscriptionFilter) (int, error) {

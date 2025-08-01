@@ -5,6 +5,7 @@ import (
 
 	"github.com/Koshsky/subs-service/internal/models"
 	"github.com/Koshsky/subs-service/internal/services"
+	"github.com/Koshsky/subs-service/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 )
@@ -15,10 +16,13 @@ func init() {
 	validate = validator.New()
 }
 
-type UserController struct{ UserService *services.UserService }
+type UserController struct {
+	UserService     *services.UserService
+	JWTTokenManager *utils.JWTTokenManager
+}
 
-func NewUserController(service *services.UserService) *UserController {
-	return &UserController{UserService: service}
+func NewUserController(service *services.UserService, jwtManager *utils.JWTTokenManager) *UserController {
+	return &UserController{UserService: service, JWTTokenManager: jwtManager}
 }
 
 // Register handles user registration
@@ -64,14 +68,14 @@ func (uc *UserController) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := uc.UserService.GenerateJWTToken(user)
+	token, err := uc.JWTTokenManager.GenerateJWTToken(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
+	c.SetCookie("auth_token", token, 3600, "/", "localhost", false, true)
 	c.JSON(http.StatusOK, gin.H{
-		"token": token,
-		"email": user.Email,
+		"message": "Successfull login",
 	})
 }

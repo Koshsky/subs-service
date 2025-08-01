@@ -6,9 +6,11 @@ import (
 
 	"github.com/Koshsky/subs-service/internal/config"
 	"github.com/Koshsky/subs-service/internal/controllers"
+	"github.com/Koshsky/subs-service/internal/middleware"
 	"github.com/Koshsky/subs-service/internal/repositories/sub_repository"
 	"github.com/Koshsky/subs-service/internal/repositories/user_repository"
 	"github.com/Koshsky/subs-service/internal/services"
+	"github.com/Koshsky/subs-service/internal/utils"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -18,29 +20,31 @@ var pprofPath = "/internal/debug/pprof"
 func RegisterRoutes(r *gin.Engine, conn *gorm.DB, cfg *config.RouterConfig) {
 	r.GET("/health", healthCheck)
 
-	registerUserHandlers(r, conn)
-	registerSubHandlers(r, conn)
+	jwtManager := utils.NewJWTTokenManager()
+	registerUserHandlers(r, conn, jwtManager)
+	registerSubHandlers(r, conn, jwtManager)
 
 	if cfg.EnableProfiling {
 		registerPprofHandlers(r)
 	}
 }
 
-func registerUserHandlers(r *gin.Engine, conn *gorm.DB) {
+func registerUserHandlers(r *gin.Engine, conn *gorm.DB, jwtManager *utils.JWTTokenManager) {
 	repo := user_repository.New(conn)
 	service := services.NewUserService(repo)
-	userController := controllers.NewUserController(service)
+	userController := controllers.NewUserController(service, jwtManager)
 
 	r.POST("/register", userController.Register)
 	r.POST("/login", userController.Login)
 }
 
-func registerSubHandlers(r *gin.Engine, conn *gorm.DB) {
+func registerSubHandlers(r *gin.Engine, conn *gorm.DB, jwtManager *utils.JWTTokenManager) {
 	repo := sub_repository.New(conn)
 	service := services.NewSubscriptionService(repo)
 	subController := controllers.NewSubscriptionController(service)
 
 	subs := r.Group("/subscriptions")
+	subs.Use(middleware.AuthMiddleware(jwtManager))
 	{
 		subs.GET("", subController.List)
 		subs.POST("", subController.Create)

@@ -25,6 +25,8 @@ func (c *SubscriptionController) Create(ctx *gin.Context) {
 		})
 		return
 	}
+
+	sub.UserID = uint(ctx.GetInt("user_id"))
 	sub, err := c.SubService.Create(sub)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Error{
@@ -48,7 +50,9 @@ func (c *SubscriptionController) Get(ctx *gin.Context) {
 		})
 		return
 	}
+
 	sub, err := c.SubService.GetByID(id)
+
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, models.Error{
 			Error:   "not found",
@@ -57,6 +61,15 @@ func (c *SubscriptionController) Get(ctx *gin.Context) {
 		})
 		return
 	}
+	if sub.UserID != uint(ctx.GetInt("user_id")) {
+		ctx.JSON(http.StatusForbidden, models.Error{
+			Error:   "forbidden",
+			Code:    models.ErrCodeForbidden,
+			Details: "you are not allowed to access this resource",
+		})
+		return
+	}
+
 	ctx.JSON(http.StatusOK, sub)
 }
 
@@ -81,6 +94,24 @@ func (c *SubscriptionController) Update(ctx *gin.Context) {
 		return
 	}
 
+	sub, err := c.SubService.GetByID(id)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, models.Error{
+			Error:   "not found",
+			Code:    models.ErrCodeNotFound,
+			Details: err.Error(),
+		})
+		return
+	}
+	if sub.UserID != uint(ctx.GetInt("user_id")) {
+		ctx.JSON(http.StatusForbidden, models.Error{
+			Error:   "forbidden",
+			Code:    models.ErrCodeForbidden,
+			Details: "you are not allowed to access this resource",
+		})
+		return
+	}
+
 	updatedSub, err := c.SubService.UpdateByID(id, inputSub)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Error{
@@ -90,12 +121,14 @@ func (c *SubscriptionController) Update(ctx *gin.Context) {
 		})
 		return
 	}
+
 	ctx.Set("db_affected_id", updatedSub.ID)
 	ctx.JSON(http.StatusOK, updatedSub)
 }
 
 func (c *SubscriptionController) List(ctx *gin.Context) {
-	subs, err := c.SubService.GetAll()
+	userID := ctx.GetInt("user_id")
+	subs, err := c.SubService.GetUserSubscriptions(userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Error{
 			Error:   "failed to get subscriptions",
@@ -120,6 +153,25 @@ func (c *SubscriptionController) Delete(ctx *gin.Context) {
 		})
 		return
 	}
+
+	sub, err := c.SubService.GetByID(id)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, models.Error{
+			Error:   "not found",
+			Code:    models.ErrCodeNotFound,
+			Details: err.Error(),
+		})
+		return
+	}
+	if sub.UserID != uint(ctx.GetInt("user_id")) {
+		ctx.JSON(http.StatusForbidden, models.Error{
+			Error:   "forbidden",
+			Code:    models.ErrCodeForbidden,
+			Details: "you are not allowed to access this resource",
+		})
+		return
+	}
+
 	if err := c.SubService.DeleteByID(id); err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Error{
 			Error:   "failed to delete subscription",
@@ -129,13 +181,13 @@ func (c *SubscriptionController) Delete(ctx *gin.Context) {
 		return
 	}
 	ctx.Set("db_affected_id", id)
-	ctx.Status(http.StatusNoContent)
+	ctx.JSON(http.StatusOK, gin.H{"message": "Deleted successfully"})
 }
 
 func (c *SubscriptionController) SumPrice(ctx *gin.Context) {
 	var req models.SubscriptionFilter
 
-	req.UserID = ctx.Query("user_id")
+	req.UserID = uint(ctx.GetInt("user_id"))
 	req.Service = ctx.Query("service")
 
 	var err error

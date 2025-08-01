@@ -5,6 +5,7 @@ const (
 	ErrCodeInvalidRequest = iota
 	ErrCodeInvalidID
 	ErrCodeNotFound
+	ErrCodeForbidden
 	ErrCodeDatabaseOperation
 	ErrCodeInvalidDate
 )

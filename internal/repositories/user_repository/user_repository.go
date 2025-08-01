@@ -16,12 +16,6 @@ func New(db *gorm.DB) *UserRepository {
 
 // CreateUser creates a new user with hashed password
 func (ur *UserRepository) CreateUser(user *models.User) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	user.Password = string(hashedPassword)
-
 	return ur.DB.Create(user).Error
 }
 

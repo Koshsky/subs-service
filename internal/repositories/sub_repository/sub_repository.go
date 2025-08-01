@@ -19,7 +19,7 @@ func (sr *SubscriptionRepository) GetBySubscriptionFilter(params models.Subscrip
 			params.StartMonth.Time(),
 			params.EndMonth.Time().AddDate(0, 1, -1)) // До конца месяца
 
-	if params.UserID != "" {
+	if params.UserID != 0 {
 		query = query.Where("user_id = ?", params.UserID)
 	}
 	if params.Service != "" {
@@ -30,13 +30,13 @@ func (sr *SubscriptionRepository) GetBySubscriptionFilter(params models.Subscrip
 	return subs, err
 }
 
-func (sr *SubscriptionRepository) GetAll() ([]models.Subscription, error) {
+func (sr *SubscriptionRepository) GetUserSubscriptions(userID uint) ([]models.Subscription, error) {
 	var subs []models.Subscription
-	result := sr.DB.Find(&subs)
+	result := sr.DB.Where("user_id = ?", userID).Find(&subs)
 	return subs, result.Error
 }
 
-func (sr *SubscriptionRepository) GetByID(id int) (models.Subscription, error) {
+func (sr *SubscriptionRepository) GetByID(id uint) (models.Subscription, error) {
 	var sub models.Subscription
 	result := sr.DB.First(&sub, id)
 	return sub, result.Error
@@ -47,7 +47,7 @@ func (sr *SubscriptionRepository) Create(sub models.Subscription) (models.Subscr
 	return sub, result.Error
 }
 
-func (sr *SubscriptionRepository) UpdateByID(id int, updatedSub models.Subscription) (models.Subscription, error) {
+func (sr *SubscriptionRepository) UpdateByID(id uint, updatedSub models.Subscription) (models.Subscription, error) {
 	var sub models.Subscription
 	if err := sr.DB.First(&sub, id).Error; err != nil {
 		return sub, err
@@ -57,7 +57,7 @@ func (sr *SubscriptionRepository) UpdateByID(id int, updatedSub models.Subscript
 	return sub, result.Error
 }
 
-func (sr *SubscriptionRepository) DeleteByID(id int) error {
+func (sr *SubscriptionRepository) DeleteByID(id uint) error {
 	result := sr.DB.Delete(&models.Subscription{}, id)
 	return result.Error
 }

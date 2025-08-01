@@ -7,11 +7,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type TokenValidator interface {
+type JWTTokenValidator interface {
 	ValidateToken(string) (jwt.MapClaims, error)
 }
 
-func AuthMiddleware(TokenValidator TokenValidator) gin.HandlerFunc {
+func AuthMiddleware(jwtValidator JWTTokenValidator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var tokenString string
 
@@ -23,7 +23,7 @@ func AuthMiddleware(TokenValidator TokenValidator) gin.HandlerFunc {
 			return
 		}
 
-		claims, err := TokenValidator.ValidateToken(tokenString)
+		claims, err := jwtValidator.ValidateToken(tokenString)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   "Invalid token",
@@ -32,8 +32,16 @@ func AuthMiddleware(TokenValidator TokenValidator) gin.HandlerFunc {
 			return
 		}
 
-		c.Set("email", claims["email"])
-		c.Set("user_id", claims["user_id"])
+		userID, ok := claims["user_id"].(float64) // JWT числа всегда float64
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid user ID in token",
+			})
+			return
+		}
+
+		c.Set("email", claims["email"].(string))
+		c.Set("user_id", int(userID)) // Преобразуем float64 -> int
 		c.Next()
 	}
 }
