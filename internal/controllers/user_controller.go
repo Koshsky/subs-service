@@ -35,7 +35,7 @@ func (uc *UserController) Register(c *gin.Context) {
 	}
 
 	if err := uc.UserService.RegisterUser(&user); err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Username already exists"})
+		c.JSON(http.StatusConflict, gin.H{"error": "Email already exists"})
 		return
 	}
 
@@ -49,7 +49,7 @@ func (uc *UserController) Register(c *gin.Context) {
 // Login handles user authentication
 func (uc *UserController) Login(c *gin.Context) {
 	var credentials struct {
-		Username string `json:"username" binding:"required"`
+		Email    string `json:"email" binding:"required"`
 		Password string `json:"password" binding:"required"`
 	}
 
@@ -58,7 +58,7 @@ func (uc *UserController) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := uc.UserService.ValidateCredentials(credentials.Username, credentials.Password)
+	user, err := uc.UserService.ValidateCredentials(credentials.Email, credentials.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
@@ -71,7 +71,7 @@ func (uc *UserController) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"token":    token,
-		"username": user.Username,
+		"token": token,
+		"email": user.Email,
 	})
 }

@@ -26,15 +26,15 @@ func (us *UserService) RegisterUser(user *models.User) error {
 }
 
 // ValidateCredentials validates user credentials
-func (us *UserService) ValidateCredentials(username, password string) (*models.User, error) {
-	return us.UserRepo.ValidateUser(username, password)
+func (us *UserService) ValidateCredentials(email, password string) (*models.User, error) {
+	return us.UserRepo.ValidateUser(email, password)
 }
 
 func (us *UserService) GenerateJWTToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
-		"username": user.Username,
-		"user_id":  user.ID,
-		"exp":      time.Now().Add(24 * time.Hour).Unix(),
+		"email":   user.Email,
+		"user_id": user.ID,
+		"exp":     time.Now().Add(24 * time.Hour).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

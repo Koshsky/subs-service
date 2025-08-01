@@ -32,7 +32,7 @@ func AuthMiddleware(TokenValidator TokenValidator) gin.HandlerFunc {
 			return
 		}
 
-		c.Set("username", claims["username"])
+		c.Set("email", claims["email"])
 		c.Set("user_id", claims["user_id"])
 		c.Next()
 	}

@@ -26,9 +26,9 @@ func (ur *UserRepository) CreateUser(user *models.User) error {
 }
 
 // ValidateUser checks credentials and returns user if valid
-func (ur *UserRepository) ValidateUser(username, password string) (*models.User, error) {
+func (ur *UserRepository) ValidateUser(email, password string) (*models.User, error) {
 	var user models.User
-	err := ur.DB.Where("username = ?", username).First(&user).Error
+	err := ur.DB.Where("email = ?", email).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
