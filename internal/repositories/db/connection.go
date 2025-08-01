@@ -12,13 +12,13 @@ import (
 	"gorm.io/gorm"
 )
 
-func ConnectDatabase(dbConfig *config.DBConfig) *gorm.DB {
-	db, err := gorm.Open(postgres.Open(dbConfig.ConnectionString()), &gorm.Config{})
+func ConnectDatabase(cfg *config.DBConfig) *gorm.DB {
+	db, err := gorm.Open(postgres.Open(cfg.ConnectionString()), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to connect to database: ", err)
 	}
 
-	if err := applyMigrations(dbConfig); err != nil {
+	if err := applyMigrations(cfg); err != nil {
 		log.Fatal("Failed to apply migrations: ", err)
 	}
 

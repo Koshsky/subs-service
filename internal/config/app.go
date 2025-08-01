@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"strconv"
 
@@ -9,20 +10,29 @@ import (
 )
 
 type AppConfig struct {
-	DB     *DBConfig
-	Router *RouterConfig
+	DB         *DBConfig
+	Router     *RouterConfig
+	Middleware *MiddlewareConfig
 }
 
 func LoadConfig() (*AppConfig, error) {
 	err := godotenv.Load()
 	if err != nil {
-		return nil, fmt.Errorf("error loading .env file: %w", err)
+		if _, ok := err.(*fs.PathError); ok {
+			// Return both config and a sentinel error that can be checked by caller if needed
+			return loadAppConfig(), fmt.Errorf("proceeding without .env file: %w", err)
+		}
+		return nil, fmt.Errorf("failed to load .env file: %w", err)
 	}
+	return loadAppConfig(), nil
+}
 
+func loadAppConfig() *AppConfig {
 	return &AppConfig{
-		DB:     loadDBConfig(),
-		Router: loadRouterConfig(),
-	}, nil
+		DB:         loadDBConfig(),
+		Router:     loadRouterConfig(),
+		Middleware: loadMiddlewareConfig(),
+	}
 }
 
 func getEnv(key, defaultValue string) string {
