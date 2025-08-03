@@ -78,12 +78,16 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: object
+                properties:
+                  error:
+                    type: string
+                  details:
+                    type: string
               examples:
                 InvalidData:
                   value:
                     error: "invalid request body"
-                    code: 0
                     details: "invalid date format, expected MM-YYYY"
 
     get:
@@ -157,11 +161,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: object
+                properties:
+                  error:
+                    type: string
+                  details:
+                    type: string
               example:
                 value:
-                  error: "failed to get subscription"
-                  code: 2
+                  error: "not found"
                   details: "subscription with id=5 not found"
 
     put:
@@ -201,11 +209,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: object
+                properties:
+                  error:
+                    type: string
+                  details:
+                    type: string
               example:
                 value:
-                  error: "failed to update subscription"
-                  code: 3
+                  error: "not found"
                   details: "subscription with id=5 not found"
 
     delete:
@@ -226,11 +238,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: object
+                properties:
+                  error:
+                    type: string
+                  details:
+                    type: string
               example:
                 value:
-                  error: "failed to delete subscription"
-                  code: 3
+                  error: "not found"
                   details: "subscription with id=5 not found"
 
   /subscriptions/total:
@@ -289,11 +305,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: object
+                properties:
+                  error:
+                    type: string
+                  details:
+                    type: string
               example:
                 value:
-                  error: "failed to calculate total price"
-                  code: 4
+                  error: "invalid start month format"
                   details: "invalid date format, expected MM-YYYY"
 
 components:
@@ -330,21 +350,3 @@ components:
           nullable: true
           description: Дата окончания в формате MM-YYYY (необязательное)
           example: "12-2025"
-
-    Error:
-      type: object
-      description: Объект ошибки API
-      properties:
-        error:
-          type: string
-          description: Сообщение об ошибке
-        code:
-          type: string
-          description: Код ошибки для программной обработки
-          enum: [ErrCodeInvalidRequest, ErrCodeInvalidID, ErrCodeNotFound, ErrCodeDatabaseOperation, ErrCodeInvalidDate]
-        details:
-          type: string
-          description: Детали ошибки (опционально)
-      required:
-        - error
-        - code

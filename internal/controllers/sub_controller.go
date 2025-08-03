@@ -18,10 +18,9 @@ func NewSubscriptionController(service *services.SubscriptionService) *Subscript
 func (c *SubscriptionController) Create(ctx *gin.Context) {
 	var sub models.Subscription
 	if err := ctx.ShouldBindJSON(&sub); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Error{
-			Error:   "invalid request body",
-			Code:    models.ErrCodeInvalidRequest,
-			Details: err.Error(),
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid request body",
+			"details": err.Error(),
 		})
 		return
 	}
@@ -29,10 +28,9 @@ func (c *SubscriptionController) Create(ctx *gin.Context) {
 	sub.UserID = uint(ctx.GetInt("user_id"))
 	sub, err := c.SubService.Create(sub)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Error{
-			Error:   "failed to create subscription",
-			Code:    models.ErrCodeDatabaseOperation,
-			Details: err.Error(),
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "failed to create subscription",
+			"details": err.Error(),
 		})
 		return
 	}
@@ -43,10 +41,9 @@ func (c *SubscriptionController) Create(ctx *gin.Context) {
 func (c *SubscriptionController) Get(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Error{
-			Error:   "invalid id format",
-			Code:    models.ErrCodeInvalidID,
-			Details: err.Error(),
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid id format",
+			"details": err.Error(),
 		})
 		return
 	}
@@ -54,18 +51,16 @@ func (c *SubscriptionController) Get(ctx *gin.Context) {
 	sub, err := c.SubService.GetByID(id)
 
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, models.Error{
-			Error:   "not found",
-			Code:    models.ErrCodeNotFound,
-			Details: err.Error(),
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"error":   "not found",
+			"details": err.Error(),
 		})
 		return
 	}
 	if sub.UserID != uint(ctx.GetInt("user_id")) {
-		ctx.JSON(http.StatusForbidden, models.Error{
-			Error:   "forbidden",
-			Code:    models.ErrCodeForbidden,
-			Details: "you are not allowed to access this resource",
+		ctx.JSON(http.StatusForbidden, gin.H{
+			"error":   "forbidden",
+			"details": "you are not allowed to access this resource",
 		})
 		return
 	}
@@ -76,48 +71,43 @@ func (c *SubscriptionController) Get(ctx *gin.Context) {
 func (c *SubscriptionController) Update(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Error{
-			Error:   "invalid id format",
-			Code:    models.ErrCodeInvalidID,
-			Details: err.Error(),
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid id format",
+			"details": err.Error(),
 		})
 		return
 	}
 
 	var inputSub models.Subscription
 	if err := ctx.ShouldBindJSON(&inputSub); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Error{
-			Error:   "invalid request body",
-			Code:    models.ErrCodeInvalidRequest,
-			Details: err.Error(),
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid request body",
+			"details": err.Error(),
 		})
 		return
 	}
 
 	sub, err := c.SubService.GetByID(id)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, models.Error{
-			Error:   "not found",
-			Code:    models.ErrCodeNotFound,
-			Details: err.Error(),
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"error":   "not found",
+			"details": err.Error(),
 		})
 		return
 	}
 	if sub.UserID != uint(ctx.GetInt("user_id")) {
-		ctx.JSON(http.StatusForbidden, models.Error{
-			Error:   "forbidden",
-			Code:    models.ErrCodeForbidden,
-			Details: "you are not allowed to access this resource",
+		ctx.JSON(http.StatusForbidden, gin.H{
+			"error":   "forbidden",
+			"details": "you are not allowed to access this resource",
 		})
 		return
 	}
 
 	updatedSub, err := c.SubService.UpdateByID(id, inputSub)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Error{
-			Error:   "failed to update subscription",
-			Code:    models.ErrCodeDatabaseOperation,
-			Details: err.Error(),
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "failed to update subscription",
+			"details": err.Error(),
 		})
 		return
 	}
@@ -130,10 +120,9 @@ func (c *SubscriptionController) List(ctx *gin.Context) {
 	userID := ctx.GetInt("user_id")
 	subs, err := c.SubService.GetUserSubscriptions(userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Error{
-			Error:   "failed to get subscriptions",
-			Code:    models.ErrCodeDatabaseOperation,
-			Details: err.Error(),
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "failed to get subscriptions",
+			"details": err.Error(),
 		})
 		return
 	}
@@ -146,37 +135,33 @@ func (c *SubscriptionController) List(ctx *gin.Context) {
 func (c *SubscriptionController) Delete(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Error{
-			Error:   "invalid id format",
-			Code:    models.ErrCodeInvalidID,
-			Details: err.Error(),
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid id format",
+			"details": err.Error(),
 		})
 		return
 	}
 
 	sub, err := c.SubService.GetByID(id)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, models.Error{
-			Error:   "not found",
-			Code:    models.ErrCodeNotFound,
-			Details: err.Error(),
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"error":   "not found",
+			"details": err.Error(),
 		})
 		return
 	}
 	if sub.UserID != uint(ctx.GetInt("user_id")) {
-		ctx.JSON(http.StatusForbidden, models.Error{
-			Error:   "forbidden",
-			Code:    models.ErrCodeForbidden,
-			Details: "you are not allowed to access this resource",
+		ctx.JSON(http.StatusForbidden, gin.H{
+			"error":   "forbidden",
+			"details": "you are not allowed to access this resource",
 		})
 		return
 	}
 
 	if err := c.SubService.DeleteByID(id); err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Error{
-			Error:   "failed to delete subscription",
-			Code:    models.ErrCodeDatabaseOperation,
-			Details: err.Error(),
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "failed to delete subscription",
+			"details": err.Error(),
 		})
 		return
 	}
@@ -193,29 +178,26 @@ func (c *SubscriptionController) SumPrice(ctx *gin.Context) {
 	var err error
 	err = req.StartMonth.UnmarshalJSON([]byte(ctx.Query("start_month")))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Error{
-			Error:   "invalid start month format",
-			Code:    models.ErrCodeInvalidDate,
-			Details: err.Error(),
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid start month format",
+			"details": err.Error(),
 		})
 		return
 	}
 	err = req.EndMonth.UnmarshalJSON([]byte(ctx.Query("end_month")))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Error{
-			Error:   "invalid end month format",
-			Code:    models.ErrCodeInvalidDate,
-			Details: err.Error(),
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid end month format",
+			"details": err.Error(),
 		})
 		return
 	}
 
 	sum, err := c.SubService.SumPrice(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Error{
-			Error:   "failed to calculate total price",
-			Code:    models.ErrCodeDatabaseOperation,
-			Details: err.Error(),
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "failed to calculate total price",
+			"details": err.Error(),
 		})
 		return
 	}
