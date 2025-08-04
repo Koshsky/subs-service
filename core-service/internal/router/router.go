@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 	"net/http/pprof"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -82,5 +83,9 @@ func pprofHandler(h http.HandlerFunc) gin.HandlerFunc {
 
 // healthCheck is a health check endpoint
 func healthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	c.JSON(http.StatusOK, gin.H{
+		"status":    "ok",
+		"service":   "core-service",
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	})
 }

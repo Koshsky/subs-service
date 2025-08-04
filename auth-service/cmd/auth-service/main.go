@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
+	"net/http"
+	"time"
 
 	"github.com/Koshsky/subs-service/auth-service/internal/authpb"
 	"github.com/Koshsky/subs-service/auth-service/internal/config"
@@ -23,6 +26,22 @@ func main() {
 	userRepo := repositories.NewUserRepository(db)
 	authService := services.NewAuthService(userRepo, []byte(cfg.JWTSecret))
 	authServer := server.NewAuthServer(authService)
+
+	// Start HTTP health check server
+	go func() {
+		http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintf(w, `{"status":"ok","service":"auth-service","timestamp":"%s"}`,
+				time.Now().UTC().Format(time.RFC3339))
+		})
+
+		healthPort := "8081" // Fixed health check port
+		log.Printf("Health check server started on port %s", healthPort)
+		if err := http.ListenAndServe(":"+healthPort, nil); err != nil {
+			log.Printf("Health check server failed: %v", err)
+		}
+	}()
 
 	lis, err := net.Listen("tcp", ":"+cfg.Port)
 	if err != nil {

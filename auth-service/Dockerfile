@@ -1,6 +1,6 @@
 FROM golang:1.24-alpine
 
-RUN apk add --no-cache git libc6-compat
+RUN apk add --no-cache git libc6-compat wget
 
 WORKDIR /app
 COPY shared/go.mod shared/go.sum ./shared/

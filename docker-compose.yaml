@@ -38,6 +38,30 @@ services:
       - up
     restart: on-failure
 
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./auth-service/Dockerfile
+    container_name: subs_auth_service
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    ports:
+      - "${AUTH_PORT:-50051}:${AUTH_PORT:-50051}"
+      - "${AUTH_HEALTH_PORT:-8081}:8081"
+    networks:
+      - subs_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8081/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   core-service:
     build:
       context: .
@@ -49,26 +73,19 @@ services:
         condition: service_healthy
       migrator:
         condition: service_completed_successfully
+      auth-service:
+        condition: service_healthy
     ports:
       - "${CORE_PORT:-8080}:${CORE_PORT:-8080}"
     networks:
       - subs_net
     restart: unless-stopped
-
-  auth-service:
-    build:
-      context: .
-      dockerfile: ./auth-service/Dockerfile
-    container_name: subs_auth_service
-    env_file: .env
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "${AUTH_PORT:-50051}:${AUTH_PORT:-50051}"
-    networks:
-      - subs_net
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${CORE_PORT:-8080}/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   postgres_data:
