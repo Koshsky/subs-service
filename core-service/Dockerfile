@@ -16,6 +16,9 @@ WORKDIR /app
 COPY core-service ./core-service
 COPY shared ./shared
 
+# Create certs directory for TLS certificates
+RUN mkdir -p /app/certs
+
 WORKDIR /app/core-service
 
 RUN CGO_ENABLED=0 go build -o core-service cmd/subs-service/main.go && \
@@ -31,6 +34,8 @@ RUN chown -R appuser:appgroup /app
 ENV CORE_PORT=${CORE_PORT:-8080}
 ENV DATABASE_URL=${DATABASE_URL:-postgres://user:password@localhost/subs_db?sslmode=disable}
 ENV AUTH_SERVICE_ADDR=${AUTH_SERVICE_ADDR:-localhost:50051}
+ENV ENABLE_TLS=${ENABLE_TLS:-false}
+ENV TLS_CERT_FILE=${TLS_CERT_FILE:-/app/certs/server-cert.pem}
 
 EXPOSE ${CORE_PORT}
 

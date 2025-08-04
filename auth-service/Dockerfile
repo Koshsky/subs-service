@@ -16,6 +16,9 @@ WORKDIR /app
 COPY auth-service ./auth-service
 COPY shared ./shared
 
+# Create certs directory for TLS certificates
+RUN mkdir -p /app/certs
+
 WORKDIR /app/auth-service
 
 RUN CGO_ENABLED=0 go build -o auth-service cmd/auth-service/main.go && \
@@ -31,6 +34,9 @@ RUN chown -R appuser:appgroup /app
 ENV AUTH_PORT=${AUTH_PORT:-50051}
 ENV DATABASE_URL=${DATABASE_URL:-postgres://user:password@localhost/subs_db?sslmode=disable}
 ENV JWT_SECRET=${JWT_SECRET:-your_jwt_secret_key}
+ENV ENABLE_TLS=${ENABLE_TLS:-false}
+ENV TLS_CERT_FILE=${TLS_CERT_FILE:-/app/certs/server-cert.pem}
+ENV TLS_KEY_FILE=${TLS_KEY_FILE:-/app/certs/server-key.pem}
 
 EXPOSE ${AUTH_PORT}
 
