@@ -38,8 +38,10 @@ services:
       - up
     restart: on-failure
 
-  app:
-    build: .
+  core-service:
+    build:
+      context: .
+      dockerfile: ./core-service/Dockerfile
     container_name: subs_service
     env_file: .env
     depends_on:
@@ -48,7 +50,22 @@ services:
       migrator:
         condition: service_completed_successfully
     ports:
-      - "8080:8080"
+      - "${CORE_PORT:-8080}:${CORE_PORT:-8080}"
+    networks:
+      - subs_net
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./auth-service/Dockerfile
+    container_name: subs_auth_service
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${AUTH_PORT:-50051}:${AUTH_PORT:-50051}"
     networks:
       - subs_net
     restart: unless-stopped
