@@ -21,10 +21,20 @@ WORKDIR /app/core-service
 RUN CGO_ENABLED=0 go build -o core-service cmd/subs-service/main.go && \
     chmod +x core-service
 
+# Create a non-root user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup
+
+# Change ownership of the application to the non-root user
+RUN chown -R appuser:appgroup /app
+
 ENV CORE_PORT=${CORE_PORT:-8080}
 ENV DATABASE_URL=${DATABASE_URL:-postgres://user:password@localhost/subs_db?sslmode=disable}
 ENV AUTH_SERVICE_ADDR=${AUTH_SERVICE_ADDR:-localhost:50051}
 
 EXPOSE ${CORE_PORT}
+
+# Switch to non-root user
+USER appuser
 
 CMD ["./core-service"]
