@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package authpb;
+
+option go_package = "github.com/Koshsky/subs-service/core-service/internal/corepb";
+
+// Запрос для валидации токена
+message TokenRequest {
+  string token = 1;
+}
+
+// Ответ с информацией о пользователе
+message UserResponse {
+  uint32 user_id = 1;
+  string email = 2;
+  bool valid = 3;
+  string error = 4;
+}
+
+// Запрос для регистрации пользователя
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+}
+
+// Ответ для регистрации пользователя
+message RegisterResponse {
+  uint32 user_id = 1;
+  string email = 2;
+  bool success = 3;
+  string error = 4;
+  string message = 5;
+}
+
+// Запрос для логина
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+// Ответ для логина
+message LoginResponse {
+  string token = 1;
+  uint32 user_id = 2;
+  string email = 3;
+  bool success = 4;
+  string error = 5;
+  string message = 6;
+}
+
+// Сервис аутентификации
+service AuthService {
+  // Валидация токена и получение информации о пользователе
+  rpc ValidateToken(TokenRequest) returns (UserResponse);
+
+  // Регистрация нового пользователя
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Логин пользователя
+  rpc Login(LoginRequest) returns (LoginResponse);
+}
