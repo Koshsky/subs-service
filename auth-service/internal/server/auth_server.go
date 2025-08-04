@@ -1,0 +1,89 @@
+package server
+
+import (
+	"context"
+
+	"github.com/Koshsky/subs-service/auth-service/internal/authpb"
+	"github.com/Koshsky/subs-service/auth-service/internal/services"
+)
+
+type AuthServer struct {
+	authpb.UnimplementedAuthServiceServer
+	AuthService *services.AuthService
+}
+
+func NewAuthServer(authService *services.AuthService) *AuthServer {
+	return &AuthServer{
+		AuthService: authService,
+	}
+}
+
+// ValidateToken checks if the token is valid and returns the user and error if it's not
+func (s *AuthServer) ValidateToken(ctx context.Context, req *authpb.TokenRequest) (*authpb.UserResponse, error) {
+	claims, err := s.AuthService.ValidateToken(ctx, req.Token)
+	if err != nil {
+		return &authpb.UserResponse{
+			Valid: false,
+			Error: err.Error(),
+		}, nil
+	}
+
+	userID, ok := claims["user_id"].(float64)
+	if !ok {
+		return &authpb.UserResponse{
+			Valid: false,
+			Error: "Invalid user ID in token",
+		}, nil
+	}
+
+	email, ok := claims["email"].(string)
+	if !ok {
+		return &authpb.UserResponse{
+			Valid: false,
+			Error: "Invalid email in token",
+		}, nil
+	}
+
+	return &authpb.UserResponse{
+		UserId: uint32(userID),
+		Email:  email,
+		Valid:  true,
+	}, nil
+}
+
+// Register creates a new user and returns the user and error if it's not
+func (s *AuthServer) Register(ctx context.Context, req *authpb.RegisterRequest) (*authpb.RegisterResponse, error) {
+	user, err := s.AuthService.Register(ctx, req.Email, req.Password)
+	if err != nil {
+		return &authpb.RegisterResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+
+	return &authpb.RegisterResponse{
+		UserId:  uint32(user.ID),
+		Email:   user.Email,
+		Success: true,
+		Message: "User created successfully",
+	}, nil
+}
+
+// Login logs in a user and returns the token and user and error if it's not
+func (s *AuthServer) Login(ctx context.Context, req *authpb.LoginRequest) (*authpb.LoginResponse, error) {
+	token, user, err := s.AuthService.Login(ctx, req.Email, req.Password)
+	if err != nil {
+		return &authpb.LoginResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+
+	return &authpb.LoginResponse{
+		Token:   token,
+		UserId:  uint32(user.ID),
+		Email:   user.Email,
+		Success: true,
+		Message: "Successful login",
+	}, nil
+}
