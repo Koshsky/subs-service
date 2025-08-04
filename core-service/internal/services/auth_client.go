@@ -6,6 +6,7 @@ import (
 
 	"github.com/Koshsky/subs-service/core-service/internal/corepb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -14,8 +15,23 @@ type AuthClient struct {
 	conn   *grpc.ClientConn
 }
 
-func NewAuthClient(authServiceAddr string) (*AuthClient, error) {
-	conn, err := grpc.Dial(authServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func NewAuthClient(authServiceAddr string, enableTLS bool, tlsCertFile string) (*AuthClient, error) {
+	var conn *grpc.ClientConn
+	var err error
+
+	if enableTLS {
+		// Create TLS credentials
+		creds, err := credentials.NewClientTLSFromFile(tlsCertFile, "")
+		if err != nil {
+			log.Printf("Failed to load TLS credentials, falling back to insecure: %v", err)
+			conn, err = grpc.NewClient(authServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		} else {
+			conn, err = grpc.NewClient(authServiceAddr, grpc.WithTransportCredentials(creds))
+		}
+	} else {
+		conn, err = grpc.NewClient(authServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	}
+
 	if err != nil {
 		return nil, err
 	}

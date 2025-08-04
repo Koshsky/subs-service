@@ -26,7 +26,7 @@ func main() {
 	}
 
 	// Создаем gRPC клиент для auth-service
-	authClient, err := services.NewAuthClient(cfg.AuthServiceAddr)
+	authClient, err := services.NewAuthClient(cfg.AuthServiceAddr, cfg.EnableTLS, cfg.TLSCertFile)
 	if err != nil {
 		log.Fatalf("Failed to connect to auth service: %v", err)
 	}
