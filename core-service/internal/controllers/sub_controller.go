@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/Koshsky/subs-service/core-service/internal/models"
 	"github.com/Koshsky/subs-service/core-service/internal/services"
-	"github.com/Koshsky/subs-service/shared/models"
 )
 
 type SubscriptionController struct{ SubService *services.SubscriptionService }

@@ -12,7 +12,6 @@ import (
 	"github.com/Koshsky/subs-service/auth-service/internal/repositories"
 	"github.com/Koshsky/subs-service/auth-service/internal/server"
 	"github.com/Koshsky/subs-service/auth-service/internal/services"
-	"github.com/Koshsky/subs-service/shared/db"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
@@ -21,9 +20,14 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
-	db := db.ConnectDatabase(cfg.DatabaseURL)
+	// Connect to database using config method
+	database, err := cfg.ConnectDB()
+	if err != nil {
+		log.Fatalf("Failed to connect to auth database: %v", err)
+	}
+	log.Println("Auth database connection established successfully")
 
-	userRepo := repositories.NewUserRepository(db)
+	userRepo := repositories.NewUserRepository(database)
 	authService := services.NewAuthService(userRepo, []byte(cfg.JWTSecret))
 	authServer := server.NewAuthServer(authService)
 

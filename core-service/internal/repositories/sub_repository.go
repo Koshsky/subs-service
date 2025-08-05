@@ -3,7 +3,7 @@ package repositories
 import (
 	"gorm.io/gorm"
 
-	"github.com/Koshsky/subs-service/shared/models"
+	"github.com/Koshsky/subs-service/core-service/internal/models"
 )
 
 type SubscriptionRepository struct{ DB *gorm.DB }

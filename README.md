@@ -7,6 +7,7 @@
 Этот проект демонстрирует современные подходы к разработке backend-систем и включает в себя:
 
 - **Микросервисную архитектуру** с разделением на auth-service и core-service
+- **Отдельные базы данных** для каждого сервиса (Database per Service pattern)
 - **gRPC API** для высокопроизводительного межсервисного взаимодействия
 - **JWT-аутентификацию** для безопасности
 - **PostgreSQL** с миграциями базы данных
@@ -16,24 +17,32 @@
 ## 🏗️ Архитектура
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Auth Service  │    │   Core Service  │    │   PostgreSQL    │
-│   (gRPC:50051)  │◄──►│   (HTTP:8080)   │◄──►│   (Port:5432)   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌─────────────────┐    ┌─────────────────┐
+│   Auth Service  │    │   Core Service  │
+│   (gRPC:50051)  │◄──►│   (HTTP:8080)   │
+└─────────┬───────┘    └─────────┬───────┘
+          │                      │
+          ▼                      ▼
+┌─────────────────┐    ┌─────────────────┐
+│   Auth DB       │    │   Core DB       │
+│ (users, auth)   │    │ (subscriptions) │
+│ Port: 5433      │    │ Port: 5434      │
+└─────────────────┘    └─────────────────┘
 ```
 
 ### Сервисы
 
 - **Auth Service**: Аутентификация пользователей, JWT токены, gRPC API
 - **Core Service**: Основная бизнес-логика управления подписками, REST API
-- **Database**: PostgreSQL с автоматическими миграциями
+- **Auth Database**: PostgreSQL база для пользователей и аутентификации
+- **Core Database**: PostgreSQL база для подписок и бизнес-данных
 
 ## 🛠️ Технологический стек
 
 ### Backend
 - **Go 1.24** - основной язык программирования
 - **gRPC** - межсервисное взаимодействие
-- **PostgreSQL** - основная база данных
+- **PostgreSQL** - отдельные базы данных для каждого сервиса
 - **JWT** - аутентификация и авторизация
 - **Docker & Docker Compose** - контейнеризация
 
@@ -41,7 +50,7 @@
 - **Dockerfile** - мультистадийная сборка
 - **Docker Compose** - оркестрация сервисов
 - **Health Checks** - мониторинг состояния
-- **Database Migrations** - автоматическое управление схемой БД
+- **Database Migrations** - автоматическое управление схемой БД через контейнеры
 
 ## 🚀 Быстрый старт
 
@@ -79,6 +88,11 @@ docker-compose ps
 - **Core Service Health**: http://localhost:8080/health
 - **Core Service API**: http://localhost:8080/api/v1/
 
+### Базы данных
+
+- **Auth Database**: localhost:5433 (auth_user/auth_pass/auth_db)
+- **Core Database**: localhost:5434 (core_user/core_pass/core_db)
+
 ## 📁 Структура проекта
 
 ```
@@ -86,14 +100,20 @@ docker-compose ps
 ├── auth-service/           # Сервис аутентификации
 │   ├── cmd/               # Точки входа
 │   ├── internal/          # Внутренняя логика
-│   ├── proto/             # gRPC протоколы
+│   │   ├── models/        # Модели данных auth-service
+│   │   ├── db/            # Подключение к auth БД
+│   │   └── ...
+│   ├── migrations/        # SQL миграции для auth БД
 │   └── Dockerfile         # Контейнер auth-service
 ├── core-service/          # Основной сервис
 │   ├── cmd/               # Точки входа
 │   ├── internal/          # Внутренняя логика
+│   │   ├── models/        # Модели данных core-service
+│   │   ├── db/            # Подключение к core БД
+│   │   └── ...
+│   ├── migrations/        # SQL миграции для core БД
 │   └── Dockerfile         # Контейнер core-service
-├── shared/                # Общие библиотеки
-├── migrations/            # SQL миграции
+├── shared/                # Общие библиотеки (utils)
 ├── docs/                  # Документация
 ├── docker-compose.yaml    # Оркестрация сервисов
 └── README.md             # Этот файл
@@ -112,11 +132,11 @@ cd ../core-service && go mod download
 2. **Запуск отдельного сервиса**
 ```bash
 # Только auth-service
-docker-compose up -d db migrator
+docker-compose up -d auth-db auth-migrator
 docker-compose up auth-service
 
 # Только core-service
-docker-compose up -d db migrator auth-service
+docker-compose up -d core-db core-migrator auth-service
 docker-compose up core-service
 ```
 
@@ -125,11 +145,14 @@ docker-compose up core-service
 Миграции выполняются автоматически при запуске через Docker Compose. Для ручного управления:
 
 ```bash
-# Применить миграции
-docker-compose up migrator
+# Применить миграции auth-service
+docker-compose up auth-migrator
+
+# Применить миграции core-service
+docker-compose up core-migrator
 
 # Откатить миграции
-docker-compose run --rm migrator -path=/migrations -database="postgres://..." down
+docker-compose run --rm auth-migrator -path=/migrations -database="postgres://..." down
 ```
 
 ## 🧪 Тестирование
@@ -156,12 +179,13 @@ curl -X POST http://localhost:8080/api/v1/users/register \
 - JWT токены для аутентификации
 - Переменные окружения для конфиденциальных данных
 - Непривилегированные пользователи в контейнерах
+- Изолированные базы данных для каждого сервиса
 - Health checks для мониторинга
 
 ## 📊 Мониторинг
 
 Проект включает health checks для всех сервисов:
-- Database health check с pg_isready
+- Database health check с pg_isready для каждой БД
 - HTTP health endpoints для сервисов
 - Настроенные retry политики
 
@@ -197,6 +221,12 @@ curl -X POST http://localhost:8080/api/v1/users/register \
 - Возможность независимого масштабирования компонентов
 - Разделение ответственности между сервисами
 
+### Почему отдельные БД?
+- **Database per Service pattern** - каждый сервис владеет своими данными
+- Независимое масштабирование баз данных
+- Изоляция данных и безопасность
+- Возможность использования разных типов БД для разных сервисов
+
 ### Почему gRPC?
 - Высокая производительность бинарного протокола
 - Строгая типизация через Protocol Buffers
@@ -206,5 +236,11 @@ curl -X POST http://localhost:8080/api/v1/users/register \
 - ACID-совместимость для критически важных данных
 - Мощные возможности для сложных запросов
 - Надежность и производительность
+
+### Почему контейнер-миграторы?
+- Отдельный этап миграций в CI/CD pipeline
+- Безопасность - миграции не влияют на работу сервисов
+- Возможность отката миграций
+- Production-ready подход
 
 Этот проект демонстрирует знание современных практик разработки backend-систем и готовность к работе в production-окружении.

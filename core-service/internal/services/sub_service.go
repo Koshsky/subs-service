@@ -1,8 +1,8 @@
 package services
 
 import (
+	"github.com/Koshsky/subs-service/core-service/internal/models"
 	"github.com/Koshsky/subs-service/core-service/internal/repositories"
-	"github.com/Koshsky/subs-service/shared/models"
 )
 
 type SubscriptionService struct {

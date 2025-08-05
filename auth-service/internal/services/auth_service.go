@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Koshsky/subs-service/auth-service/internal/models"
 	"github.com/Koshsky/subs-service/auth-service/internal/repositories"
-	"github.com/Koshsky/subs-service/shared/models"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 )

@@ -1,40 +1,81 @@
 version: '3.8'
 
 services:
-  db:
+  # Auth Service Database
+  auth-db:
     image: postgres:15-alpine
-    container_name: subs_db
+    container_name: auth_db
     env_file: .env
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${AUTH_DB_USER:-auth_user}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-auth_pass}
+      POSTGRES_DB: ${AUTH_DB_NAME:-auth_db}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - auth_postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - subs_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-auth_user} -d ${AUTH_DB_NAME:-auth_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  migrator:
+  # Core Service Database
+  core-db:
+    image: postgres:15-alpine
+    container_name: core_db
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${CORE_DB_USER:-core_user}
+      POSTGRES_PASSWORD: ${CORE_DB_PASSWORD:-core_pass}
+      POSTGRES_DB: ${CORE_DB_NAME:-core_db}
+    volumes:
+      - core_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    networks:
+      - subs_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CORE_DB_USER:-core_user} -d ${CORE_DB_NAME:-core_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Auth Database Migrator
+  auth-migrator:
     image: migrate/migrate:v4.16.2
-    container_name: subs_migrator
+    container_name: auth_migrator
     env_file: .env
     depends_on:
-      db:
+      auth-db:
         condition: service_healthy
     volumes:
-      - ./migrations:/migrations
+      - ./auth-service/migrations:/migrations
     networks:
       - subs_net
     command:
       - -path=/migrations
-      - -database=postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable
+      - -database=postgres://${AUTH_DB_USER:-auth_user}:${AUTH_DB_PASSWORD:-auth_pass}@auth-db:5432/${AUTH_DB_NAME:-auth_db}?sslmode=disable
+      - up
+    restart: on-failure
+
+  # Core Database Migrator
+  core-migrator:
+    image: migrate/migrate:v4.16.2
+    container_name: core_migrator
+    env_file: .env
+    depends_on:
+      core-db:
+        condition: service_healthy
+    volumes:
+      - ./core-service/migrations:/migrations
+    networks:
+      - subs_net
+    command:
+      - -path=/migrations
+      - -database=postgres://${CORE_DB_USER:-core_user}:${CORE_DB_PASSWORD:-core_pass}@core-db:5432/${CORE_DB_NAME:-core_db}?sslmode=disable
       - up
     restart: on-failure
 
@@ -45,9 +86,9 @@ services:
     container_name: subs_auth_service
     env_file: .env
     depends_on:
-      db:
+      auth-db:
         condition: service_healthy
-      migrator:
+      auth-migrator:
         condition: service_completed_successfully
     ports:
       - "${AUTH_PORT:-50051}:${AUTH_PORT:-50051}"
@@ -61,6 +102,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    environment:
+      - DATABASE_URL=postgres://${AUTH_DB_USER:-auth_user}:${AUTH_DB_PASSWORD:-auth_pass}@auth-db:5432/${AUTH_DB_NAME:-auth_db}?sslmode=disable
 
   core-service:
     build:
@@ -69,9 +112,9 @@ services:
     container_name: subs_service
     env_file: .env
     depends_on:
-      db:
+      core-db:
         condition: service_healthy
-      migrator:
+      core-migrator:
         condition: service_completed_successfully
       auth-service:
         condition: service_healthy
@@ -86,9 +129,12 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    environment:
+      - DATABASE_URL=postgres://${CORE_DB_USER:-core_user}:${CORE_DB_PASSWORD:-core_pass}@core-db:5432/${CORE_DB_NAME:-core_db}?sslmode=disable
 
 volumes:
-  postgres_data:
+  auth_postgres_data:
+  core_postgres_data:
 
 networks:
   subs_net:

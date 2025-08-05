@@ -3,7 +3,7 @@ package repositories
 import (
 	"log"
 
-	"github.com/Koshsky/subs-service/shared/models"
+	"github.com/Koshsky/subs-service/auth-service/internal/models"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
