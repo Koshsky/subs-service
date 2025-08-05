@@ -80,7 +80,7 @@ func (s *AuthService) ValidateToken(ctx context.Context, tokenString string) (jw
 func (s *AuthService) GenerateJWTToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
 		"email":   user.Email,
-		"user_id": user.ID,
+		"user_id": user.ID.String(), // Convert UUID to string for JSON compatibility
 		"exp":     time.Now().Add(24 * time.Hour).Unix(),
 	}
 
