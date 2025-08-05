@@ -32,7 +32,6 @@ type Config struct {
 	AuthServiceAddr string
 	TLSCertFile     string
 	EnableTLS       bool
-	DatabaseURL     string // For backward compatibility
 }
 
 // LoadConfig loads configuration from environment variables
@@ -50,7 +49,6 @@ func LoadConfig() *Config {
 
 	return &Config{
 		Database:        db,
-		DatabaseURL:     utils.GetEnv("DATABASE_URL", db.ConnectionString()),
 		Port:            utils.GetEnv("CORE_PORT", "8080"),
 		AuthServiceAddr: utils.GetEnv("AUTH_SERVICE_ADDR", "localhost:50051"),
 		TLSCertFile:     utils.GetEnv("TLS_CERT_FILE", "certs/server-cert.pem"),
@@ -60,5 +58,5 @@ func LoadConfig() *Config {
 
 // ConnectDB connects to the core database
 func (c *Config) ConnectDB() (*gorm.DB, error) {
-	return gorm.Open(postgres.Open(c.DatabaseURL), &gorm.Config{})
+	return gorm.Open(postgres.Open(c.Database.ConnectionString()), &gorm.Config{})
 }

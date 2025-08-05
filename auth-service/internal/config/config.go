@@ -33,7 +33,6 @@ type Config struct {
 	TLSCertFile string
 	TLSKeyFile  string
 	EnableTLS   bool
-	DatabaseURL string // For backward compatibility
 }
 
 // LoadConfig loads configuration from environment variables
@@ -51,7 +50,6 @@ func LoadConfig() *Config {
 
 	return &Config{
 		Database:    db,
-		DatabaseURL: utils.GetEnv("DATABASE_URL", db.ConnectionString()),
 		JWTSecret:   utils.GetEnv("JWT_SECRET", "your_jwt_secret_key"),
 		Port:        utils.GetEnv("AUTH_PORT", "50051"),
 		TLSCertFile: utils.GetEnv("TLS_CERT_FILE", "certs/server-cert.pem"),
@@ -62,5 +60,5 @@ func LoadConfig() *Config {
 
 // ConnectDB connects to the auth database
 func (c *Config) ConnectDB() (*gorm.DB, error) {
-	return gorm.Open(postgres.Open(c.DatabaseURL), &gorm.Config{})
+	return gorm.Open(postgres.Open(c.Database.ConnectionString()), &gorm.Config{})
 }

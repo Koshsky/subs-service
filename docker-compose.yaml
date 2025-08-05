@@ -102,8 +102,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    environment:
-      - DATABASE_URL=postgres://${AUTH_DB_USER:-auth_user}:${AUTH_DB_PASSWORD:-auth_pass}@auth-db:5432/${AUTH_DB_NAME:-auth_db}?sslmode=disable
 
   core-service:
     build:
@@ -129,8 +127,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    environment:
-      - DATABASE_URL=postgres://${CORE_DB_USER:-core_user}:${CORE_DB_PASSWORD:-core_pass}@core-db:5432/${CORE_DB_NAME:-core_db}?sslmode=disable
 
 volumes:
   auth_postgres_data:
