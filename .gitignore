@@ -1,3 +1,9 @@
 tmp/
 .air.toml
 .env
+
+# TLS certificates (security sensitive)
+certs/
+*.pem
+*.key
+*.crt
