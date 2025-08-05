@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 
-	"github.com/Koshsky/subs-service/shared/utils"
+	"github.com/Koshsky/subs-service/auth-service/internal/utils"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

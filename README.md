@@ -113,7 +113,6 @@ docker-compose ps
 │   │   └── ...
 │   ├── migrations/        # SQL миграции для core БД
 │   └── Dockerfile         # Контейнер core-service
-├── shared/                # Общие библиотеки (utils)
 ├── docs/                  # Документация
 ├── docker-compose.yaml    # Оркестрация сервисов
 └── README.md             # Этот файл

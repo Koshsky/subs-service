@@ -1,6 +1,8 @@
 tmp/
 .air.toml
 .env
+go.work
+
 
 # TLS certificates (security sensitive)
 certs/

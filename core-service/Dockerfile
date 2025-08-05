@@ -3,18 +3,12 @@ FROM golang:1.24-alpine
 RUN apk add --no-cache git libc6-compat wget
 
 WORKDIR /app
-COPY shared/go.mod shared/go.sum ./shared/
-WORKDIR /app/shared
-RUN go mod download
-
-WORKDIR /app
 COPY core-service/go.mod core-service/go.sum ./core-service/
 WORKDIR /app/core-service
 RUN go mod download
 
 WORKDIR /app
 COPY core-service ./core-service
-COPY shared ./shared
 
 # Create certs directory for TLS certificates
 RUN mkdir -p /app/certs
