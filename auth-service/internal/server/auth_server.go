@@ -28,7 +28,7 @@ func (s *AuthServer) ValidateToken(ctx context.Context, req *authpb.TokenRequest
 		}, nil
 	}
 
-	userID, ok := claims["user_id"].(float64)
+	userIDStr, ok := claims["user_id"].(string)
 	if !ok {
 		return &authpb.UserResponse{
 			Valid: false,
@@ -45,7 +45,7 @@ func (s *AuthServer) ValidateToken(ctx context.Context, req *authpb.TokenRequest
 	}
 
 	return &authpb.UserResponse{
-		UserId: uint32(userID),
+		UserId: userIDStr,
 		Email:  email,
 		Valid:  true,
 	}, nil
@@ -62,7 +62,7 @@ func (s *AuthServer) Register(ctx context.Context, req *authpb.RegisterRequest) 
 	}
 
 	return &authpb.RegisterResponse{
-		UserId:  uint32(user.ID),
+		UserId:  user.ID.String(),
 		Email:   user.Email,
 		Success: true,
 		Message: "User created successfully",
@@ -81,7 +81,7 @@ func (s *AuthServer) Login(ctx context.Context, req *authpb.LoginRequest) (*auth
 
 	return &authpb.LoginResponse{
 		Token:   token,
-		UserId:  uint32(user.ID),
+		UserId:  user.ID.String(),
 		Email:   user.Email,
 		Success: true,
 		Message: "Successful login",

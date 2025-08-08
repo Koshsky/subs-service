@@ -1,19 +1,35 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-
+	"github.com/Koshsky/subs-service/core-service/internal/models"
 	"github.com/Koshsky/subs-service/core-service/internal/services"
-	"github.com/Koshsky/subs-service/shared/models"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type SubscriptionController struct{ SubService *services.SubscriptionService }
 
 func NewSubscriptionController(service *services.SubscriptionService) *SubscriptionController {
 	return &SubscriptionController{SubService: service}
+}
+
+// getUserIDFromContext extracts and parses user UUID from gin context
+func getUserIDFromContext(ctx *gin.Context) (uuid.UUID, error) {
+	userIDStr, exists := ctx.Get("user_id")
+	if !exists {
+		return uuid.Nil, fmt.Errorf("user_id not found in context")
+	}
+
+	userIDString, ok := userIDStr.(string)
+	if !ok {
+		return uuid.Nil, fmt.Errorf("user_id is not a string")
+	}
+
+	return uuid.Parse(userIDString)
 }
 
 // Create creates a new subscription
@@ -27,8 +43,17 @@ func (c *SubscriptionController) Create(ctx *gin.Context) {
 		return
 	}
 
-	sub.UserID = uint(ctx.GetInt("user_id"))
-	sub, err := c.SubService.Create(sub)
+	userID, err := getUserIDFromContext(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid user ID",
+			"details": err.Error(),
+		})
+		return
+	}
+	sub.UserID = userID
+
+	sub, err = c.SubService.Create(sub)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "failed to create subscription",
@@ -60,7 +85,15 @@ func (c *SubscriptionController) Get(ctx *gin.Context) {
 		})
 		return
 	}
-	if sub.UserID != uint(ctx.GetInt("user_id")) {
+	userID, err := getUserIDFromContext(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid user ID",
+			"details": err.Error(),
+		})
+		return
+	}
+	if sub.UserID != userID {
 		ctx.JSON(http.StatusForbidden, gin.H{
 			"error":   "forbidden",
 			"details": "you are not allowed to access this resource",
@@ -99,7 +132,15 @@ func (c *SubscriptionController) Update(ctx *gin.Context) {
 		})
 		return
 	}
-	if sub.UserID != uint(ctx.GetInt("user_id")) {
+	userID, err := getUserIDFromContext(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid user ID",
+			"details": err.Error(),
+		})
+		return
+	}
+	if sub.UserID != userID {
 		ctx.JSON(http.StatusForbidden, gin.H{
 			"error":   "forbidden",
 			"details": "you are not allowed to access this resource",
@@ -122,7 +163,14 @@ func (c *SubscriptionController) Update(ctx *gin.Context) {
 
 // List lists all subscriptions for a user
 func (c *SubscriptionController) List(ctx *gin.Context) {
-	userID := ctx.GetInt("user_id")
+	userID, err := getUserIDFromContext(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid user ID",
+			"details": err.Error(),
+		})
+		return
+	}
 	subs, err := c.SubService.GetUserSubscriptions(userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -156,7 +204,15 @@ func (c *SubscriptionController) Delete(ctx *gin.Context) {
 		})
 		return
 	}
-	if sub.UserID != uint(ctx.GetInt("user_id")) {
+	userID, err := getUserIDFromContext(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid user ID",
+			"details": err.Error(),
+		})
+		return
+	}
+	if sub.UserID != userID {
 		ctx.JSON(http.StatusForbidden, gin.H{
 			"error":   "forbidden",
 			"details": "you are not allowed to access this resource",
@@ -179,10 +235,17 @@ func (c *SubscriptionController) Delete(ctx *gin.Context) {
 func (c *SubscriptionController) SumPrice(ctx *gin.Context) {
 	var req models.SubscriptionFilter
 
-	req.UserID = uint(ctx.GetInt("user_id"))
+	userID, err := getUserIDFromContext(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid user ID",
+			"details": err.Error(),
+		})
+		return
+	}
+	req.UserID = userID
 	req.Service = ctx.Query("service")
 
-	var err error
 	err = req.StartMonth.UnmarshalJSON([]byte(ctx.Query("start_month")))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{

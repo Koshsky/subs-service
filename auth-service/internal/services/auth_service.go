@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Koshsky/subs-service/auth-service/internal/models"
 	"github.com/Koshsky/subs-service/auth-service/internal/repositories"
-	"github.com/Koshsky/subs-service/shared/models"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -80,7 +80,7 @@ func (s *AuthService) ValidateToken(ctx context.Context, tokenString string) (jw
 func (s *AuthService) GenerateJWTToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
 		"email":   user.Email,
-		"user_id": user.ID,
+		"user_id": user.ID.String(), // Convert UUID to string for JSON compatibility
 		"exp":     time.Now().Add(24 * time.Hour).Unix(),
 	}
 

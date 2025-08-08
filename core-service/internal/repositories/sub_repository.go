@@ -1,9 +1,9 @@
 package repositories
 
 import (
+	"github.com/Koshsky/subs-service/core-service/internal/models"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
-
-	"github.com/Koshsky/subs-service/shared/models"
 )
 
 type SubscriptionRepository struct{ DB *gorm.DB }
@@ -21,7 +21,7 @@ func (sr *SubscriptionRepository) GetBySubscriptionFilter(params models.Subscrip
 			params.StartMonth.Time(),
 			params.EndMonth.Time().AddDate(0, 1, -1)) // До конца месяца
 
-	if params.UserID != 0 {
+	if params.UserID != uuid.Nil {
 		query = query.Where("user_id = ?", params.UserID)
 	}
 	if params.Service != "" {
@@ -33,7 +33,7 @@ func (sr *SubscriptionRepository) GetBySubscriptionFilter(params models.Subscrip
 }
 
 // GetUserSubscriptions gets user subscriptions
-func (sr *SubscriptionRepository) GetUserSubscriptions(userID uint) ([]models.Subscription, error) {
+func (sr *SubscriptionRepository) GetUserSubscriptions(userID uuid.UUID) ([]models.Subscription, error) {
 	var subs []models.Subscription
 	result := sr.DB.Where("user_id = ?", userID).Find(&subs)
 	return subs, result.Error

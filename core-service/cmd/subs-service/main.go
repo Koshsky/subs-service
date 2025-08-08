@@ -8,8 +8,6 @@ import (
 	"github.com/Koshsky/subs-service/core-service/internal/repositories"
 	"github.com/Koshsky/subs-service/core-service/internal/router"
 	"github.com/Koshsky/subs-service/core-service/internal/services"
-	"github.com/Koshsky/subs-service/shared/db"
-	"github.com/Koshsky/subs-service/shared/models"
 )
 
 func main() {
@@ -17,13 +15,12 @@ func main() {
 	cfg := config.LoadConfig()
 
 	// Подключаемся к базе данных
-	db := db.ConnectDatabase(cfg.DatabaseURL)
-
-	// Выполняем миграции для подписок
-	err := db.AutoMigrate(&models.Subscription{})
+	// Миграции выполняются автоматически контейнерами
+	database, err := cfg.ConnectDB()
 	if err != nil {
-		log.Fatalf("Failed to migrate database: %v", err)
+		log.Fatalf("Failed to connect to core database: %v", err)
 	}
+	log.Println("Core database connection established successfully")
 
 	// Создаем gRPC клиент для auth-service
 	authClient, err := services.NewAuthClient(cfg.AuthServiceAddr, cfg.EnableTLS, cfg.TLSCertFile)
@@ -33,7 +30,7 @@ func main() {
 	defer authClient.Close()
 
 	// Создаем репозитории
-	subRepo := repositories.NewSubscriptionRepository(db)
+	subRepo := repositories.NewSubscriptionRepository(database)
 
 	// Создаем сервисы
 	subService := services.NewSubscriptionService(subRepo)

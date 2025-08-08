@@ -1,8 +1,9 @@
 package services
 
 import (
+	"github.com/Koshsky/subs-service/core-service/internal/models"
 	"github.com/Koshsky/subs-service/core-service/internal/repositories"
-	"github.com/Koshsky/subs-service/shared/models"
+	"github.com/google/uuid"
 )
 
 type SubscriptionService struct {
@@ -24,8 +25,8 @@ func (s *SubscriptionService) GetByID(id int) (models.Subscription, error) {
 }
 
 // GetUserSubscriptions gets user subscriptions
-func (s *SubscriptionService) GetUserSubscriptions(userID int) ([]models.Subscription, error) {
-	return s.SubRepo.GetUserSubscriptions(uint(userID))
+func (s *SubscriptionService) GetUserSubscriptions(userID uuid.UUID) ([]models.Subscription, error) {
+	return s.SubRepo.GetUserSubscriptions(userID)
 }
 
 // UpdateByID updates a subscription by id

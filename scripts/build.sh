@@ -10,7 +10,6 @@ source scripts/generate-proto.sh
 
 # Синхронизация зависимостей
 echo "📦 Syncing dependencies..."
-cd shared && go mod tidy && cd ..
 cd core-service && go mod tidy && cd ..
 cd auth-service && go mod tidy && cd ..
 
