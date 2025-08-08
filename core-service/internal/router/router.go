@@ -14,10 +14,12 @@ import (
 
 // SetupRouter sets up the router
 func SetupRouter(
-	authController *controllers.AuthController,
-	subController *controllers.SubscriptionController,
+	subService *services.SubscriptionService,
 	authClient *services.AuthClient,
 ) *gin.Engine {
+	subController := controllers.NewSubscriptionController(subService)
+	authController := controllers.NewAuthController(authClient)
+
 	r := gin.Default()
 	r.Use(middleware.RateLimiter())
 	r.GET("/health", healthCheck)

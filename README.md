@@ -199,21 +199,9 @@ curl -X POST http://localhost:8080/api/v1/users/register \
 - Docker Swarm
 - Cloud platforms (AWS, GCP, Azure)
 
-## 🤝 Вклад в проект
-
-1. Fork проекта
-2. Создайте feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit изменения (`git commit -m 'Add amazing feature'`)
-4. Push в branch (`git push origin feature/amazing-feature`)
-5. Откройте Pull Request
-
 ## 📝 Лицензия
 
 Этот проект создан в учебных целях и для демонстрации навыков разработки.
-
-## 👤 Автор
-
-**Ваше имя** - демонстрационный проект для портфолио
 
 ---
 

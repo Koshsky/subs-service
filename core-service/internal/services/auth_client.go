@@ -23,11 +23,9 @@ func NewAuthClient(authServiceAddr string, enableTLS bool, tlsCertFile string) (
 		// Create TLS credentials
 		creds, err := credentials.NewClientTLSFromFile(tlsCertFile, "")
 		if err != nil {
-			log.Printf("Failed to load TLS credentials, falling back to insecure: %v", err)
-			conn, err = grpc.NewClient(authServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		} else {
-			conn, err = grpc.NewClient(authServiceAddr, grpc.WithTransportCredentials(creds))
+			log.Fatalf("Failed to create TLS credentials for auth-service: %v", err)
 		}
+		conn, err = grpc.NewClient(authServiceAddr, grpc.WithTransportCredentials(creds))
 	} else {
 		conn, err = grpc.NewClient(authServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
