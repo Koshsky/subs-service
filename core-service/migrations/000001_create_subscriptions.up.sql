@@ -1,9 +1,11 @@
--- Core Service Database: Subscriptions table
+-- Core Service Database: Subscriptions table (user_id as UUID)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE subscriptions (
     id SERIAL PRIMARY KEY,
     service_name VARCHAR(255) NOT NULL,
     price INTEGER NOT NULL CHECK (price > 0),
-    user_id INTEGER NOT NULL,  -- Reference to user from auth-service
+    user_id UUID NOT NULL,  -- Reference to user from auth-service
     start_date DATE NOT NULL,
     end_date DATE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
