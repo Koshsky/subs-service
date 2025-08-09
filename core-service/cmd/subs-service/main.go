@@ -27,7 +27,7 @@ func main() {
 	subRepo := repositories.NewSubscriptionRepository(database)
 	subService := services.NewSubscriptionService(subRepo)
 
-	r := router.SetupRouter(subService, authClient)
+	r := router.SetupRouter(subService, authClient, authClient.ValidateToken)
 
 	log.Printf("Core service started on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

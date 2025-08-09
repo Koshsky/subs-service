@@ -1,21 +1,61 @@
 #!/bin/bash
+set -euo pipefail
 
-# Create certs directory if it doesn't exist
-mkdir -p certs
+# Always run from repo root (script is in scripts/)
+cd "$(dirname "$0")/.."
 
-# Generate private key for server
-openssl genrsa -out certs/server-key.pem 4096
+CERTS_DIR="certs"
+KEY_FILE="$CERTS_DIR/server-key.pem"
+CERT_FILE="$CERTS_DIR/server-cert.pem"
 
-# Generate certificate signing request for server
-openssl req -new -x509 -key certs/server-key.pem -out certs/server-cert.pem -days 365 -subj "/C=US/ST=CA/L=San Francisco/O=MyOrg/OU=MyOrgUnit/CN=localhost"
+mkdir -p "$CERTS_DIR"
 
-# Set appropriate permissions
-chmod 600 certs/server-key.pem
-chmod 644 certs/server-cert.pem
+# Clean old certs
+rm -f "$KEY_FILE" "$CERT_FILE"
 
-echo "TLS certificates generated successfully!"
-echo "Server certificate: certs/server-cert.pem"
-echo "Server private key: certs/server-key.pem"
-echo ""
-echo "Note: These are self-signed certificates for development use only."
-echo "For production, use certificates from a trusted Certificate Authority."
+# Create a temporary OpenSSL config with SANs for auth-service and localhost
+TMP_CNF="$(mktemp)"
+cat > "$TMP_CNF" << 'EOF'
+[ req ]
+distinguished_name = dn
+x509_extensions = v3_req
+prompt = no
+
+[ dn ]
+C  = US
+ST = CA
+L  = San Francisco
+O  = MyOrg
+OU = MyOrgUnit
+CN = auth-service
+
+[ v3_req ]
+subjectAltName = @alt_names
+basicConstraints = CA:false
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+
+[ alt_names ]
+DNS.1 = auth-service
+DNS.2 = localhost
+EOF
+
+# Generate key and self-signed certificate with SANs
+openssl req \
+  -new -newkey rsa:4096 -nodes \
+  -keyout "$KEY_FILE" \
+  -x509 -days 365 \
+  -out "$CERT_FILE" \
+  -config "$TMP_CNF"
+
+# Cleanup temp config
+rm -f "$TMP_CNF"
+
+# Permissions
+chmod 600 "$KEY_FILE"
+chmod 644 "$CERT_FILE"
+
+echo "TLS certificates (with SANs) generated successfully!"
+printf "Server certificate: %s\n" "$CERT_FILE"
+printf "Server private key: %s\n\n" "$KEY_FILE"
+echo "Note: Self-signed certs for development only. For production, use a trusted CA."
