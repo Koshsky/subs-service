@@ -9,13 +9,13 @@ import (
 
 	"github.com/Koshsky/subs-service/core-service/internal/controllers"
 	"github.com/Koshsky/subs-service/core-service/internal/middleware"
-	"github.com/Koshsky/subs-service/core-service/internal/services"
 )
 
 // SetupRouter sets up the router
 func SetupRouter(
-	subService *services.SubscriptionService,
-	authClient *services.AuthClient,
+	subService controllers.SubscriptionService,
+	authClient controllers.AuthClient,
+	validateToken middleware.ValidateTokenFunc,
 ) *gin.Engine {
 	subController := controllers.NewSubscriptionController(subService)
 	authController := controllers.NewAuthController(authClient)
@@ -33,7 +33,7 @@ func SetupRouter(
 
 	// Protected routes (require authentication)
 	api := r.Group("/api")
-	api.Use(middleware.AuthMiddleware(authClient))
+	api.Use(middleware.AuthMiddleware(validateToken))
 	{
 		subscriptions := api.Group("/subscriptions")
 		{

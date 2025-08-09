@@ -1,17 +1,25 @@
 package controllers
 
 import (
+	"context"
 	"net/http"
 
-	"github.com/Koshsky/subs-service/core-service/internal/services"
+	"github.com/Koshsky/subs-service/core-service/internal/corepb"
 	"github.com/gin-gonic/gin"
 )
 
-type AuthController struct {
-	AuthClient *services.AuthClient
+// AuthClient defines methods controller needs from auth client
+// Matching the concrete client signatures for simple wiring
+type AuthClient interface {
+	Register(ctx context.Context, email, password string) (*corepb.RegisterResponse, error)
+	Login(ctx context.Context, email, password string) (*corepb.LoginResponse, error)
 }
 
-func NewAuthController(authClient *services.AuthClient) *AuthController {
+type AuthController struct {
+	AuthClient AuthClient
+}
+
+func NewAuthController(authClient AuthClient) *AuthController {
 	return &AuthController{
 		AuthClient: authClient,
 	}

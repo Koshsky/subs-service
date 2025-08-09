@@ -6,14 +6,31 @@ import (
 	"strconv"
 
 	"github.com/Koshsky/subs-service/core-service/internal/models"
-	"github.com/Koshsky/subs-service/core-service/internal/services"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-type SubscriptionController struct{ SubService *services.SubscriptionService }
+// SubscriptionService defines the operations controller requires
+// Placed here to depend on behavior, not concrete implementation
+// This allows services to implement this contract in their own package
+// without controllers needing to import service implementations
+// The interface remains small and focused on controller needs
+// and can evolve with controller requirements
+// Consumers provide an implementation at wiring time
+// Note: keep types in shared models package
+// to avoid circular deps
+type SubscriptionService interface {
+	Create(sub models.Subscription) (models.Subscription, error)
+	GetByID(id int) (models.Subscription, error)
+	GetUserSubscriptions(userID uuid.UUID) ([]models.Subscription, error)
+	UpdateByID(id int, update models.Subscription) (models.Subscription, error)
+	DeleteByID(id int) error
+	SumPrice(params models.SubscriptionFilter) (int, error)
+}
 
-func NewSubscriptionController(service *services.SubscriptionService) *SubscriptionController {
+type SubscriptionController struct{ SubService SubscriptionService }
+
+func NewSubscriptionController(service SubscriptionService) *SubscriptionController {
 	return &SubscriptionController{SubService: service}
 }
 
