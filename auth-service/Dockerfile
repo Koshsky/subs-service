@@ -17,7 +17,7 @@ COPY certs /app/certs
 WORKDIR /app/auth-service
 
 # Build the binary and make it executable
-RUN CGO_ENABLED=0 go build -o auth-service cmd/auth-service/main.go && \
+RUN CGO_ENABLED=0 go build -o auth-service ./cmd/auth-service/main.go && \
     chmod +x auth-service
 
 # Create non-root user and set ownership

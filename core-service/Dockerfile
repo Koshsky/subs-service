@@ -17,7 +17,7 @@ COPY certs /app/certs
 WORKDIR /app/core-service
 
 # Build the binary and make it executable
-RUN CGO_ENABLED=0 go build -o core-service cmd/subs-service/main.go && \
+RUN CGO_ENABLED=0 go build -o core-service ./cmd/core-service && \
     chmod +x core-service
 
 # Create non-root user and set ownership
