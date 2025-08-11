@@ -76,10 +76,10 @@ graph TD
 docker-compose ps
 
 # Проверить healthcheck конкретного сервиса
-docker inspect --format='{{json .State.Health}}' subs_auth_service
+docker inspect --format='{{json .State.Health}}' auth_service
 
 # Посмотреть логи healthcheck
-docker logs subs_auth_service
+docker logs auth_service
 ```
 
 ### Ручная проверка endpoints
