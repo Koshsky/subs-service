@@ -72,110 +72,36 @@ check_dependencies() {
     print_success "All dependencies installed"
 }
 
+# Function to validate environment variables
+validate_environment() {
+    print_status "Validating environment variables..."
+    
+    if [ -f "scripts/validate-env.sh" ]; then
+        if ./scripts/validate-env.sh; then
+            print_success "Environment validation passed"
+        else
+            print_warning "Environment validation failed, but continuing..."
+        fi
+    else
+        print_warning "validate-env.sh not found, skipping environment validation"
+    fi
+}
+
 # Function to generate TLS certificates
 generate_tls_certificates() {
     print_status "Generating TLS certificates..."
     
-    # Check for certs directory
-    if [ ! -d "certs" ]; then
-        print_status "Creating certs directory..."
-        mkdir -p certs
-    fi
-    
-    # Check for generate-certs.sh script
-    if [ -f "scripts/generate-certs.sh" ]; then
-        print_status "Running generate-certs.sh..."
-        ./scripts/generate-certs.sh
+    if [ -f "scripts/generate-tls.sh" ]; then
+        ./scripts/generate-tls.sh
         print_success "TLS certificates generated"
     else
-        print_warning "generate-certs.sh not found, creating basic certificates..."
-        
-        # Create self-signed certificates
-        local cert_file="certs/server-cert.pem"
-        local key_file="certs/server-key.pem"
-        
-        # Generate private key
-        openssl genrsa -out "$key_file" 2048 2>/dev/null || {
-            print_error "Failed to generate private key"
-            return 1
-        }
-        
-        # Create configuration file for certificate
-        local config_file="certs/cert.conf"
-        cat > "$config_file" << 'EOF'
-[req]
-distinguished_name = req_distinguished_name
-req_extensions = v3_req
-prompt = no
-
-[req_distinguished_name]
-C = RU
-ST = Moscow
-L = Moscow
-O = SubsService
-OU = Development
-CN = localhost
-
-[v3_req]
-keyUsage = keyEncipherment, dataEncipherment
-extendedKeyUsage = serverAuth
-subjectAltName = @alt_names
-
-[alt_names]
-DNS.1 = localhost
-DNS.2 = auth-service
-DNS.3 = core-service
-DNS.4 = notification-service
-DNS.5 = *.localhost
-IP.1 = 127.0.0.1
-IP.2 = ::1
-EOF
-        
-        # Generate certificate
-        openssl req -new -x509 -key "$key_file" -out "$cert_file" -days 365 -config "$config_file" 2>/dev/null || {
-            print_error "Failed to generate certificate"
-            return 1
-        }
-        
-        # Set correct permissions
-        chmod 600 "$key_file"
-        chmod 644 "$cert_file"
-        
-        # Remove temporary config
-        rm -f "$config_file"
-        
-        print_success "Basic TLS certificates created"
+        print_warning "generate-tls.sh not found, skipping TLS certificate generation"
     fi
-    
-    # Check if certificates exist
-    if [ ! -f "certs/server-cert.pem" ] || [ ! -f "certs/server-key.pem" ]; then
-        print_error "TLS certificates not found after generation"
-        return 1
-    fi
-    
-    print_success "TLS certificates ready to use"
 }
 
 # Function to check and update proto files
 check_proto_files() {
     print_status "Checking proto files..."
-    
-    # Check for proto files
-    local proto_files=(
-        "auth-service/internal/authpb/auth.proto"
-    )
-    
-    for proto_file in "${proto_files[@]}"; do
-        if [ ! -f "$proto_file" ]; then
-            print_error "Proto file not found: $proto_file"
-            exit 1
-        fi
-    done
-    
-    print_success "Proto files found"
-    
-    # Generate code from proto files
-    print_status "Generating code from proto files..."
     
     if [ -f "scripts/generate-proto.sh" ]; then
         ./scripts/generate-proto.sh
@@ -188,48 +114,13 @@ check_proto_files() {
 # Function to check and update go.mod and go.sum
 update_go_dependencies() {
     print_status "Checking and updating Go dependencies..."
-    
-    # Check for go.work file
-    if [ ! -f "go.work" ]; then
-        print_warning "go.work file not found, creating from example..."
-        if [ -f "go.work.example" ]; then
-            cp go.work.example go.work
-            print_success "go.work file created from example"
-        else
-            print_error "go.work.example not found"
-            exit 1
-        fi
+
+    if [ -f "scripts/update-dependencies.sh" ]; then
+        ./scripts/update-dependencies.sh
+        print_success "Go dependencies updated"
+    else
+        print_warning "update-dependencies.sh not found, skipping update"
     fi
-    
-    # Update dependencies for each service
-    local services=("auth-service" "core-service" "notification-service")
-    
-    for service in "${services[@]}"; do
-        if [ -d "$service" ]; then
-            print_status "Updating dependencies for $service..."
-            cd "$service"
-            
-            # Check for go.mod
-            if [ ! -f "go.mod" ]; then
-                print_error "go.mod not found in $service"
-                exit 1
-            fi
-            
-            # Update dependencies
-            go mod tidy
-            go mod download
-            
-            print_success "Dependencies for $service updated"
-            cd ..
-        else
-            print_warning "Directory $service not found"
-        fi
-    done
-    
-    # Update workspace
-    print_status "Updating workspace dependencies..."
-    go work sync
-    print_success "Workspace dependencies updated"
 }
 
 # Function to create and validate .env file
@@ -392,6 +283,7 @@ parse_arguments() {
     local clear_volumes=false
     local proto_generate=false
     local no_cache=false
+    local validate_env=false
     
     # Parse arguments
     for arg in "$@"; do
@@ -405,7 +297,7 @@ parse_arguments() {
             --cert)
                 cert_generate=true
                 ;;
-            --purge)
+            --purge|--prune)
                 purge_all=true
                 ;;
             --clear)
@@ -416,6 +308,9 @@ parse_arguments() {
                 ;;
             --no-cache)
                 no_cache=true
+                ;;
+            --validate-env)
+                validate_env=true
                 ;;
             -h|--help)
                 show_help
@@ -430,7 +325,7 @@ parse_arguments() {
     done
     
     # If no flags are specified, use automatic detection
-    if [ "$docker_build" = false ] && [ "$env_setup" = false ] && [ "$cert_generate" = false ] && [ "$purge_all" = false ] && [ "$clear_volumes" = false ] && [ "$proto_generate" = false ]; then
+    if [ "$docker_build" = false ] && [ "$env_setup" = false ] && [ "$cert_generate" = false ] && [ "$purge_all" = false ] && [ "$clear_volumes" = false ] && [ "$proto_generate" = false ] && [ "$validate_env" = false ]; then
         auto_detect_operations
         return
     fi
@@ -445,6 +340,12 @@ parse_arguments() {
     if [ "$purge_all" = true ]; then
         print_status "🧹 Performing cleanup..."
         cleanup_all
+        echo
+    fi
+    
+    if [ "$validate_env" = true ]; then
+        print_status "🔍 Validating environment..."
+        validate_environment
         echo
     fi
     
@@ -588,7 +489,7 @@ cleanup_all() {
     print_success "Cleanup completed"
 }
 
-    # Function to clear volumes (deletes database data)
+# Function to clear volumes (deletes database data)
 clear_volumes_data() {
     print_status "Clearing volumes..."
     
@@ -615,22 +516,24 @@ show_help() {
     echo "  ./scripts/build.sh [FLAGS]"
     echo
     echo "Flags:"
-    echo "  --docker     Build Docker images"
-    echo "  --env        Create/validate .env file"
-    echo "  --cert       Generate TLS certificates"
-    echo "  --purge      Clean up unused resources (containers, networks, volumes, images, cache)"
-    echo "  --clear      Clear volumes (deletes database data)"
-    echo "  --proto      Generate proto files"
-    echo "  --no-cache   Full rebuild without using cache"
-    echo "  --help, -h   Show this help"
+    echo "  --docker        Build Docker images"
+    echo "  --env           Create/validate .env file"
+    echo "  --cert          Generate TLS certificates"
+    echo "  --purge/--prune Clean up unused resources (containers, networks, volumes, images, cache)"
+    echo "  --clear         Clear volumes (deletes database data)"
+    echo "  --proto         Generate proto files"
+    echo "  --no-cache      Full rebuild without using cache"
+    echo "  --validate-env  Validate environment variables"
+    echo "  --help, -h      Show this help"
     echo
     echo "Flag combinations:"
-    echo "  --purge --cert --env --docker  # Clean up + full rebuild"
-    echo "  --clear --cert --env --docker  # Clear data + full rebuild"
-    echo "  --cert --env                   # Only configuration"
-    echo "  --docker                       # Only build images"
-    echo "  --purge                        # Only clean up unused resources"
-    echo "  --clear                        # Only clear volumes (data)"
+    echo "  --purge --cert --env --docker     # Clean up + full rebuild"
+    echo "  --clear --cert --env --docker     # Clear data + full rebuild"
+    echo "  --cert --env                      # Only configuration"
+    echo "  --docker                          # Only build images"
+    echo "  --purge                           # Only clean up unused resources"
+    echo "  --clear                           # Only clear volumes (data)"
+    echo "  --validate-env                    # Only validate environment"
     echo
     echo "Automatic mode (no flags):"
     echo "  Script automatically detects required operations"
@@ -643,9 +546,8 @@ show_help() {
     echo "  ./scripts/build.sh --clear --docker   # Clear data + build"
     echo "  ./scripts/build.sh --cert --env       # Only configuration"
     echo "  ./scripts/build.sh --clear            # Clear database data"
+    echo "  ./scripts/build.sh --validate-env     # Validate environment variables"
 }
-
-
 
 main() {
     echo
@@ -671,7 +573,7 @@ main() {
     echo
     echo "🔍 To check the status:"
     echo "   docker-compose ps"
-    echo "   ./scripts/check-rabbitmq.sh"
+    echo "   ./scripts/health-check.sh"
     echo "   ./scripts/test-api.sh"
     echo
     echo "📖 For help:"

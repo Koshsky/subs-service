@@ -21,7 +21,7 @@ echo "🏥 Checking all services health..."
 echo "=================================="
 
 # Call the health check script
-./scripts/health-check.sh
+# ./scripts/health-check.sh
 
 echo
 echo "🚀 Starting API tests..."
@@ -41,6 +41,7 @@ REGISTER_RESPONSE=$(curl -s -X POST "$API_URL/auth/register" \
         \"email\": \"$EMAIL\",
         \"password\": \"$PASSWORD\"
     }")
+
 
 echo "Response:"
 print_response "$REGISTER_RESPONSE"

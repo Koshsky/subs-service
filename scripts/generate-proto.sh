@@ -3,6 +3,20 @@
 # Script to generate protobuf files
 set -e
 
+# Check for proto files
+proto_files=(
+    "auth-service/internal/authpb/auth.proto"
+)
+
+for proto_file in "${proto_files[@]}"; do
+    if [ ! -f "$proto_file" ]; then
+        echo "Proto file not found: $proto_file"
+        exit 1
+    fi
+done
+
+echo "Proto files found"
+
 echo "🔧 Generating protobuf files..."
 
 # Check if protoc is installed
