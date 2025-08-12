@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/Koshsky/subs-service/auth-service/internal/models"
@@ -24,28 +25,37 @@ func NewAuthService(repo *repositories.UserRepository, jwtSecret []byte) *AuthSe
 	}
 }
 
-// Register creates a new user and returns the user and error if it's not
 func (s *AuthService) Register(ctx context.Context, email, password string) (*models.User, error) {
+	startTime := time.Now()
+	log.Printf("[AUTH_SERVICE] [%s] Starting Register for email: %s", startTime.Format("15:04:05.000"), email)
+
 	user := &models.User{
 		Email:    email,
 		Password: password,
 	}
 
 	if err := s.Validator.Struct(user); err != nil {
+		totalDuration := time.Since(startTime)
+		log.Printf("[AUTH_SERVICE] [%s] Validation FAILED after %v: %v", time.Now().Format("15:04:05.000"), totalDuration, err)
 		return nil, err
 	}
 
 	err := s.UserRepo.CreateUser(user)
+
 	if err != nil {
+		totalDuration := time.Since(startTime)
+		log.Printf("[AUTH_SERVICE] [%s] Register FAILED after %v (database error: %v)", time.Now().Format("15:04:05.000"), totalDuration, err)
 		return nil, err
 	}
 
-	// Убираем пароль из ответа
 	user.Password = ""
+
+	totalDuration := time.Since(startTime)
+	log.Printf("[AUTH_SERVICE] [%s] Register SUCCESS in %v", time.Now().Format("15:04:05.000"), totalDuration)
+
 	return user, nil
 }
 
-// Login logs in a user and returns the token and user and error if it's not
 func (s *AuthService) Login(ctx context.Context, email, password string) (string, *models.User, error) {
 	user, err := s.UserRepo.ValidateUser(email, password)
 	if err != nil {
@@ -57,12 +67,11 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (string
 		return "", nil, err
 	}
 
-	// Убираем пароль из ответа
+	// Remove password from response
 	user.Password = ""
 	return token, user, nil
 }
 
-// ValidateToken checks if the token is valid and returns the claims and error if it's not
 func (s *AuthService) ValidateToken(ctx context.Context, tokenString string) (jwt.MapClaims, error) {
 	claims := jwt.MapClaims{}
 	_, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {
@@ -76,11 +85,10 @@ func (s *AuthService) ValidateToken(ctx context.Context, tokenString string) (jw
 	return claims, nil
 }
 
-// GenerateJWTToken generates a JWT token for a user
 func (s *AuthService) GenerateJWTToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
 		"email":   user.Email,
-		"user_id": user.ID.String(), // Convert UUID to string for JSON compatibility
+		"user_id": user.ID.String(),
 		"exp":     time.Now().Add(24 * time.Hour).Unix(),
 	}
 

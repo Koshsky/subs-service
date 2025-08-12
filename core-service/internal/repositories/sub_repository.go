@@ -19,7 +19,7 @@ func (sr *SubscriptionRepository) GetBySubscriptionFilter(params models.Subscrip
 	query := sr.DB.Model(&models.Subscription{}).
 		Where("start_date BETWEEN ? AND ?",
 			params.StartMonth.Time(),
-			params.EndMonth.Time().AddDate(0, 1, -1)) // До конца месяца
+			params.EndMonth.Time().AddDate(0, 1, -1)) // Until end of month
 
 	if params.UserID != uuid.Nil {
 		query = query.Where("user_id = ?", params.UserID)

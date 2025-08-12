@@ -10,7 +10,6 @@ import (
 
 const monthYearLayout = "01-2006"
 
-// MonthYear represents a month and year in MM-YYYY format
 type MonthYear time.Time
 
 func (my *MonthYear) UnmarshalJSON(data []byte) error {

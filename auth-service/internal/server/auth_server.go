@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"log"
+	"time"
 
 	"github.com/Koshsky/subs-service/auth-service/internal/authpb"
 	"github.com/Koshsky/subs-service/auth-service/internal/services"
@@ -18,7 +20,6 @@ func NewAuthServer(authService *services.AuthService) *AuthServer {
 	}
 }
 
-// ValidateToken checks if the token is valid and returns the user and error if it's not
 func (s *AuthServer) ValidateToken(ctx context.Context, req *authpb.TokenRequest) (*authpb.UserResponse, error) {
 	claims, err := s.AuthService.ValidateToken(ctx, req.Token)
 	if err != nil {
@@ -51,25 +52,34 @@ func (s *AuthServer) ValidateToken(ctx context.Context, req *authpb.TokenRequest
 	}, nil
 }
 
-// Register creates a new user and returns the user and error if it's not
 func (s *AuthServer) Register(ctx context.Context, req *authpb.RegisterRequest) (*authpb.RegisterResponse, error) {
+	startTime := time.Now()
+	log.Printf("[AUTH_SERVER] [%s] Starting Register gRPC handler for email: %s", startTime.Format("15:04:05.000"), req.Email)
+
 	user, err := s.AuthService.Register(ctx, req.Email, req.Password)
+
 	if err != nil {
+		totalDuration := time.Since(startTime)
+		log.Printf("[AUTH_SERVER] [%s] Register FAILED after %v (service error: %v)", time.Now().Format("15:04:05.000"), totalDuration, err)
 		return &authpb.RegisterResponse{
 			Success: false,
 			Error:   err.Error(),
 		}, nil
 	}
 
-	return &authpb.RegisterResponse{
+	response := &authpb.RegisterResponse{
 		UserId:  user.ID.String(),
 		Email:   user.Email,
 		Success: true,
 		Message: "User created successfully",
-	}, nil
+	}
+
+	totalDuration := time.Since(startTime)
+	log.Printf("[AUTH_SERVER] [%s] Register SUCCESS in %v", time.Now().Format("15:04:05.000"), totalDuration)
+
+	return response, nil
 }
 
-// Login logs in a user and returns the token and user and error if it's not
 func (s *AuthServer) Login(ctx context.Context, req *authpb.LoginRequest) (*authpb.LoginResponse, error) {
 	token, user, err := s.AuthService.Login(ctx, req.Email, req.Password)
 	if err != nil {
