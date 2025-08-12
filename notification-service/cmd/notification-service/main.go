@@ -37,7 +37,7 @@ func main() {
 	}()
 
 	// Initialize RabbitMQ service
-	rabbitmqService, err := services.NewRabbitMQService(cfg)
+	rabbitmqService, err := services.NewRabbitMQService(cfg, database)
 	if err != nil {
 		log.Fatalf("Failed to initialize RabbitMQ service: %v", err)
 	}

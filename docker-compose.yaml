@@ -41,6 +41,48 @@ services:
       timeout: 5s
       retries: 5
 
+  # Notification Service Database
+  notify-db:
+    image: postgres:15-alpine
+    container_name: notify_db
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${NOTIFY_DB_USER:-notify_user}
+      POSTGRES_PASSWORD: ${NOTIFY_DB_PASSWORD}
+      POSTGRES_DB: ${NOTIFY_DB_NAME}
+    volumes:
+      - notify_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+    networks:
+      - subs_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${NOTIFY_DB_USER:-notify_user} -d ${NOTIFY_DB_NAME:-notify_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    env_file: .env
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - subs_net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Auth Database Migrator
   auth-migrator:
     image: migrate/migrate:v4.16.2
@@ -77,6 +119,24 @@ services:
       - up
     restart: on-failure
 
+  # Notification Database Migrator
+  notify-migrator:
+    image: migrate/migrate:v4.16.2
+    container_name: notify_migrator
+    env_file: .env
+    depends_on:
+      notify-db:
+        condition: service_healthy
+    volumes:
+      - ./notification-service/migrations:/migrations
+    networks:
+      - subs_net
+    command:
+      - -path=/migrations
+      - -database=postgres://${NOTIFY_DB_USER}:${NOTIFY_DB_PASSWORD}@notify-db:5432/${NOTIFY_DB_NAME}?sslmode=disable
+      - up
+    restart: on-failure
+
   auth-service:
     build:
       context: .
@@ -88,13 +148,15 @@ services:
         condition: service_healthy
       auth-migrator:
         condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
     ports:
       - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
     networks:
       - subs_net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "grpc_health_probe", "-addr=:50051"]
+      test: ["CMD-SHELL", "netstat -tuln | grep :50051 || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -125,9 +187,36 @@ services:
       - subs_net
     restart: unless-stopped
 
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./notification-service/Dockerfile
+    container_name: notification_service
+    env_file: .env
+    depends_on:
+      notify-db:
+        condition: service_healthy
+      notify-migrator:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "${NOTIFY_PORT:-8082}:${NOTIFY_PORT:-8082}"
+    networks:
+      - subs_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${NOTIFY_PORT:-8082}/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
 volumes:
   auth_postgres_data:
   core_postgres_data:
+  notify_postgres_data:
+  rabbitmq_data:
 
 networks:
   subs_net:

@@ -11,8 +11,6 @@ import (
 	"github.com/Koshsky/subs-service/auth-service/internal/services"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/health"
-	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 func main() {
@@ -33,8 +31,19 @@ func main() {
 		}
 	}()
 
+	// Инициализируем RabbitMQ сервис
+	rabbitmqService, err := services.NewRabbitMQService(cfg)
+	if err != nil {
+		log.Printf("Warning: Failed to initialize RabbitMQ service: %v", err)
+		log.Printf("Auth service will continue without event publishing")
+		rabbitmqService = nil
+	} else {
+		defer rabbitmqService.Close()
+		log.Printf("RabbitMQ service initialized successfully")
+	}
+
 	userRepo := repositories.NewUserRepository(database)
-	authService := services.NewAuthService(userRepo, []byte(cfg.JWTSecret))
+	authService := services.NewAuthService(userRepo, rabbitmqService, []byte(cfg.JWTSecret))
 	authServer := server.NewAuthServer(authService)
 
 	var grpcServer *grpc.Server
@@ -51,11 +60,6 @@ func main() {
 	}
 
 	authpb.RegisterAuthServiceServer(grpcServer, authServer)
-
-	healthServer := health.NewServer()
-	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
-
-	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	lis, err := net.Listen("tcp", ":"+cfg.Port)
 	if err != nil {

@@ -8,16 +8,18 @@ import (
 	"github.com/Koshsky/subs-service/notification-service/internal/config"
 	"github.com/Koshsky/subs-service/notification-service/internal/models"
 	"github.com/streadway/amqp"
+	"gorm.io/gorm"
 )
 
 type RabbitMQService struct {
 	conn     *amqp.Connection
 	channel  *amqp.Channel
 	config   *config.Config
+	db       *gorm.DB
 	handlers map[string]func([]byte) error
 }
 
-func NewRabbitMQService(cfg *config.Config) (*RabbitMQService, error) {
+func NewRabbitMQService(cfg *config.Config, db *gorm.DB) (*RabbitMQService, error) {
 	conn, err := amqp.Dial(cfg.RabbitMQ.URL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RabbitMQ: %v", err)
@@ -71,6 +73,7 @@ func NewRabbitMQService(cfg *config.Config) (*RabbitMQService, error) {
 		conn:     conn,
 		channel:  ch,
 		config:   cfg,
+		db:       db,
 		handlers: make(map[string]func([]byte) error),
 	}
 
@@ -125,8 +128,21 @@ func (r *RabbitMQService) handleUserCreated(data []byte) error {
 
 	log.Printf("Received user created event: UserID=%s, Email=%s", event.UserID, event.Email)
 
-	// TODO: Implement actual notification logic
-	// For now, just log the event
+	// Создаем уведомление в базе данных
+	notification := &models.Notification{
+		UserID:  event.UserID,
+		Type:    "user.created",
+		Message: fmt.Sprintf("Добро пожаловать! Ваш аккаунт был успешно создан для email: %s", event.Email),
+		Status:  "pending",
+	}
+
+	if err := r.db.Create(notification).Error; err != nil {
+		return fmt.Errorf("failed to create notification record: %v", err)
+	}
+
+	log.Printf("Created notification record with ID: %d for user: %s", notification.ID, event.UserID)
+
+	// TODO: Здесь можно добавить логику отправки email/SMS
 	log.Printf("Would send welcome email to: %s", event.Email)
 
 	return nil

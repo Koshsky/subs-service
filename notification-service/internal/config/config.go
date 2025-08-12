@@ -55,9 +55,9 @@ func LoadConfig() *Config {
 	}
 
 	rabbitmq := RabbitMQConfig{
-		URL:      utils.GetEnvRequired("RABBITMQ_URL"),
-		Exchange: utils.GetEnvRequired("RABBITMQ_EXCHANGE"),
-		Queue:    utils.GetEnvRequired("RABBITMQ_QUEUE"),
+		URL:      utils.GetEnv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672/"),
+		Exchange: utils.GetEnv("RABBITMQ_EXCHANGE", "user_events"),
+		Queue:    utils.GetEnv("RABBITMQ_QUEUE", "user_created"),
 	}
 
 	shutdownTimeout, _ := time.ParseDuration(utils.GetEnv("NOTIFY_SHUTDOWN_TIMEOUT", "10s"))
@@ -65,7 +65,7 @@ func LoadConfig() *Config {
 	return &Config{
 		Database:        db,
 		RabbitMQ:        rabbitmq,
-		Port:            utils.GetEnvRequiredWithValidation("NOTIFY_SERVICE_PORT", utils.ValidatePort),
+		Port:            utils.GetEnv("NOTIFY_PORT", "8082"),
 		ShutdownTimeout: shutdownTimeout,
 	}
 }

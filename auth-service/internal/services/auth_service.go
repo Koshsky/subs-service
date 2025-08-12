@@ -12,16 +12,18 @@ import (
 )
 
 type AuthService struct {
-	UserRepo  *repositories.UserRepository
-	JWTSecret []byte
-	Validator *validator.Validate
+	UserRepo        *repositories.UserRepository
+	RabbitMQService *RabbitMQService
+	JWTSecret       []byte
+	Validator       *validator.Validate
 }
 
-func NewAuthService(repo *repositories.UserRepository, jwtSecret []byte) *AuthService {
+func NewAuthService(repo *repositories.UserRepository, rabbitmqService *RabbitMQService, jwtSecret []byte) *AuthService {
 	return &AuthService{
-		UserRepo:  repo,
-		JWTSecret: jwtSecret,
-		Validator: validator.New(),
+		UserRepo:        repo,
+		RabbitMQService: rabbitmqService,
+		JWTSecret:       jwtSecret,
+		Validator:       validator.New(),
 	}
 }
 
@@ -46,6 +48,14 @@ func (s *AuthService) Register(ctx context.Context, email, password string) (*mo
 		totalDuration := time.Since(startTime)
 		log.Printf("[AUTH_SERVICE] [%s] Register FAILED after %v (database error: %v)", time.Now().Format("15:04:05.000"), totalDuration, err)
 		return nil, err
+	}
+
+	// Отправляем событие о создании пользователя
+	if s.RabbitMQService != nil {
+		if err := s.RabbitMQService.PublishUserCreated(user); err != nil {
+			log.Printf("[AUTH_SERVICE] [%s] Failed to publish user.created event: %v", time.Now().Format("15:04:05.000"), err)
+			// Не возвращаем ошибку, так как основная операция прошла успешно
+		}
 	}
 
 	user.Password = ""

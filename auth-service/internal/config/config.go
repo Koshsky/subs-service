@@ -23,8 +23,14 @@ func (db *DBConfig) ConnectionString() string {
 		db.Host, db.Port, db.User, db.Password, db.DBName, db.SSLMode)
 }
 
+type RabbitMQConfig struct {
+	URL      string
+	Exchange string
+}
+
 type Config struct {
 	Database    DBConfig
+	RabbitMQ    RabbitMQConfig
 	JWTSecret   string
 	Port        string
 	TLSCertFile string
@@ -44,8 +50,14 @@ func LoadConfig() *Config {
 		SSLMode:  utils.GetEnv("AUTH_DB_SSLMODE", "disable"),
 	}
 
+	rabbitmq := RabbitMQConfig{
+		URL:      utils.GetEnv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672/"),
+		Exchange: utils.GetEnv("RABBITMQ_EXCHANGE", "user_events"),
+	}
+
 	return &Config{
 		Database:    db,
+		RabbitMQ:    rabbitmq,
 		JWTSecret:   utils.GetEnvRequiredWithValidation("JWT_SECRET", utils.ValidateMinLength(32)),
 		Port:        utils.GetEnvRequiredWithValidation("AUTH_SERVICE_PORT", utils.ValidatePort),
 		TLSCertFile: utils.GetEnv("TLS_CERT_FILE", "certs/server-cert.pem"),
