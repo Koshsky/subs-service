@@ -3,11 +3,13 @@ package services
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/Koshsky/subs-service/core-service/internal/corepb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 )
 
 type AuthClient struct {
@@ -21,38 +23,68 @@ func NewAuthClient(authServiceAddr string, enableTLS bool, tlsCertFile string) (
 		err  error
 	)
 
+	dialOptions := []grpc.DialOption{
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                10 * time.Second,
+			Timeout:             1 * time.Second,
+			PermitWithoutStream: true,
+		}),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(1024*1024),
+			grpc.MaxCallSendMsgSize(1024*1024),
+		),
+	}
+
 	if enableTLS {
-		// Server name must match the certificate (SAN/CN)
 		creds, cerr := credentials.NewClientTLSFromFile(tlsCertFile, "")
 		if cerr != nil {
 			return nil, cerr
 		}
-		conn, err = grpc.NewClient(authServiceAddr, grpc.WithTransportCredentials(creds))
+		dialOptions = append(dialOptions, grpc.WithTransportCredentials(creds))
 	} else {
-		conn, err = grpc.NewClient(authServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		dialOptions = append(dialOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
+	conn, err = grpc.NewClient(authServiceAddr, dialOptions...)
 	if err != nil {
 		return nil, err
 	}
 
 	client := corepb.NewAuthServiceClient(conn)
 
-	return &AuthClient{
+	ac := &AuthClient{
 		client: client,
 		conn:   conn,
-	}, nil
+	}
+
+	go ac.warmupConnection()
+
+	return ac, nil
 }
 
-// Close closes the connection to the auth service
 func (ac *AuthClient) Close() {
 	if ac.conn != nil {
 		ac.conn.Close()
 	}
 }
 
-// ValidateToken validates the token
+func (ac *AuthClient) warmupConnection() {
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	req := &corepb.TokenRequest{Token: ""}
+	_, err := ac.client.ValidateToken(ctx, req)
+	if err != nil {
+		log.Printf("Warmup connection completed (expected error: %v)", err)
+	} else {
+		log.Printf("Warmup connection completed successfully")
+	}
+}
+
 func (ac *AuthClient) ValidateToken(ctx context.Context, token string) (*corepb.UserResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
 	req := &corepb.TokenRequest{Token: token}
 	resp, err := ac.client.ValidateToken(ctx, req)
 	if err != nil {
@@ -62,7 +94,6 @@ func (ac *AuthClient) ValidateToken(ctx context.Context, token string) (*corepb.
 	return resp, nil
 }
 
-// Register registers a new user
 func (ac *AuthClient) Register(ctx context.Context, email, password string) (*corepb.RegisterResponse, error) {
 	req := &corepb.RegisterRequest{Email: email, Password: password}
 	resp, err := ac.client.Register(ctx, req)
@@ -74,7 +105,6 @@ func (ac *AuthClient) Register(ctx context.Context, email, password string) (*co
 	return resp, nil
 }
 
-// Login logs in a user
 func (ac *AuthClient) Login(ctx context.Context, email, password string) (*corepb.LoginResponse, error) {
 	req := &corepb.LoginRequest{Email: email, Password: password}
 	resp, err := ac.client.Login(ctx, req)
