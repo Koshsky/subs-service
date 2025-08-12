@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -82,5 +83,24 @@ func cleanupExpiredIPs() {
 			}
 		}
 		mu.Unlock()
+	}
+}
+
+// RequestLoggerMiddleware logs request timing and details
+func RequestLoggerMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		startTime := time.Now()
+		c.Next()
+		duration := time.Since(startTime)
+		statusCode := c.Writer.Status()
+
+		if statusCode >= 400 {
+			log.Printf("[REQUEST_LOGGER] [%s] %s %s - FAILED in %v (status: %d)",
+				time.Now().Format("15:04:05.000"),
+				c.Request.Method,
+				c.Request.URL.Path,
+				duration,
+				statusCode)
+		}
 	}
 }

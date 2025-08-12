@@ -17,10 +17,13 @@ func SetupRouter(
 	authClient controllers.AuthClient,
 	validateToken middleware.ValidateTokenFunc,
 ) *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
+
 	subController := controllers.NewSubscriptionController(subService)
 	authController := controllers.NewAuthController(authClient)
 
 	r := gin.Default()
+	r.Use(middleware.RequestLoggerMiddleware())
 	r.Use(middleware.RateLimiter())
 	r.GET("/health", healthCheck)
 

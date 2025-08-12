@@ -37,6 +37,7 @@ func NewAuthClient(authServiceAddr string, enableTLS bool, tlsCertFile string) (
 	}
 
 	client := corepb.NewAuthServiceClient(conn)
+
 	return &AuthClient{
 		client: client,
 		conn:   conn,
@@ -65,10 +66,11 @@ func (ac *AuthClient) ValidateToken(ctx context.Context, token string) (*corepb.
 func (ac *AuthClient) Register(ctx context.Context, email, password string) (*corepb.RegisterResponse, error) {
 	req := &corepb.RegisterRequest{Email: email, Password: password}
 	resp, err := ac.client.Register(ctx, req)
+
 	if err != nil {
-		log.Printf("Failed to register user: %v", err)
 		return nil, err
 	}
+
 	return resp, nil
 }
 
@@ -77,7 +79,6 @@ func (ac *AuthClient) Login(ctx context.Context, email, password string) (*corep
 	req := &corepb.LoginRequest{Email: email, Password: password}
 	resp, err := ac.client.Login(ctx, req)
 	if err != nil {
-		log.Printf("Failed to login user: %v", err)
 		return nil, err
 	}
 	return resp, nil
