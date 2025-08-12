@@ -31,7 +31,7 @@ jit warmup
 - `NOTIFY_DB_USER` - database user (default: notify_user)
 - `NOTIFY_DB_PASSWORD` - database password (default: notify_pass)
 - `NOTIFY_DB_NAME` - database name (default: notify_db)
-- `NOTIFY_PORT` - HTTP server port (default: 8082)
+- `NOTIFY_SERVICE_PORT` - HTTP server port (default: 8082)
 - `RABBITMQ_URL` - RabbitMQ URL (default: amqp://guest:guest@rabbitmq:5672/)
 - `RABBITMQ_EXCHANGE` - RabbitMQ exchange (default: user_events)
 - `RABBITMQ_QUEUE` - RabbitMQ queue (default: user_created)

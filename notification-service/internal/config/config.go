@@ -65,7 +65,7 @@ func LoadConfig() *Config {
 	return &Config{
 		Database:        db,
 		RabbitMQ:        rabbitmq,
-		Port:            utils.GetEnv("NOTIFY_PORT", "8082"),
+		Port:            utils.GetEnv("NOTIFY_SERVICE_PORT", "8082"),
 		ShutdownTimeout: shutdownTimeout,
 	}
 }

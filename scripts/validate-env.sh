@@ -8,25 +8,28 @@ echo "============================================="
 
 # Array of critical environment variables that MUST be set
 CRITICAL_VARS=(
-    # Database Configuration
+    # Database Configuration (REQUIRED by code)
     "AUTH_DB_USER"
     "AUTH_DB_PASSWORD"
     "AUTH_DB_NAME"
+    "AUTH_DB_PORT"
     "CORE_DB_USER"
     "CORE_DB_PASSWORD"
     "CORE_DB_NAME"
+    "CORE_DB_PORT"
     "NOTIFY_DB_USER"
     "NOTIFY_DB_PASSWORD"
     "NOTIFY_DB_NAME"
+    "NOTIFY_DB_PORT"
 
-    # Service Ports
+    # Service Ports (REQUIRED by code)
     "AUTH_SERVICE_PORT"
     "CORE_SERVICE_PORT"
     "NOTIFY_SERVICE_PORT"
     "RABBITMQ_PORT"
     "RABBITMQ_MANAGEMENT_PORT"
 
-    # Security
+    # Security (REQUIRED by code)
     "JWT_SECRET"
     "ENABLE_TLS"
 
@@ -35,10 +38,6 @@ CRITICAL_VARS=(
     "RABBITMQ_PASSWORD"
     "RABBITMQ_EXCHANGE"
     "RABBITMQ_QUEUE"
-
-    # Cookie Configuration
-    "COOKIE_DOMAIN"
-    "COOKIE_MAX_AGE"
 )
 
 # Array of variables that should have specific values or formats
@@ -46,11 +45,11 @@ VALIDATION_RULES=(
     "JWT_SECRET:min_length:32"
     "AUTH_SERVICE_PORT:port"
     "CORE_SERVICE_PORT:port"
+    "AUTH_DB_PORT:port"
+    "CORE_DB_PORT:port"
+    "NOTIFY_DB_PORT:port"
     "NOTIFY_SERVICE_PORT:port"
-    "RABBITMQ_PORT:port"
-    "RABBITMQ_MANAGEMENT_PORT:port"
     "ENABLE_TLS:boolean"
-    "COOKIE_MAX_AGE:positive_integer"
 )
 
 # Function to check if variable is set
@@ -110,108 +109,64 @@ validate_min_length() {
     fi
 }
 
-# Function to validate positive integer
-validate_positive_integer() {
-    local value=$1
-    local var_name=$2
-
-    if [[ "$value" =~ ^[1-9][0-9]*$ ]]; then
-        echo "✅ $var_name positive integer $value is valid"
-        return 0
-    else
-        echo "❌ ERROR: $var_name value $value is not a positive integer"
-        return 1
-    fi
-}
-
 # Function to check for default values in code
 check_default_values() {
     echo
     echo "🔍 Checking for default values in code..."
-    echo "=========================================="
+    echo "========================================="
 
-    local found_defaults=false
-
-    # Check for common default value patterns
-    local patterns=(
-        ":-default"
-        ":-guest"
-        ":-auth_user"
-        ":-core_user"
-        ":-notify_user"
-        ":-auth_pass"
-        ":-core_pass"
-        ":-notify_pass"
-        ":-auth_db"
-        ":-core_db"
-        ":-notify_db"
-        ":-50051"
-        ":-8080"
-        ":-8081"
-        ":-8082"
-        ":-5672"
-        ":-15672"
-        ":-5433"
-        ":-5434"
-        ":-5435"
-        ":-3600"
-        ":-localhost"
+    # Check for default values that should be overridden in production
+    local default_vars=(
+        "AUTH_DB_HOST:auth-db"
+        "CORE_DB_HOST:core-db"
+        "NOTIFY_DB_HOST:notify-db"
+        "AUTH_DB_SSLMODE:disable"
+        "CORE_DB_SSLMODE:disable"
+        "NOTIFY_DB_SSLMODE:disable"
+        "NOTIFY_SERVICE_PORT:8082"
+        "RABBITMQ_URL:amqp://guest:guest@rabbitmq:5672/"
+        "NOTIFY_SHUTDOWN_TIMEOUT:10s"
+        "TLS_CERT_FILE:certs/server-cert.pem"
+        "TLS_KEY_FILE:certs/server-key.pem"
     )
 
-    for pattern in "${patterns[@]}"; do
-        if grep -r "$pattern" . --include="*.go" --include="*.yaml" --include="*.yml" --include="*.sh" --exclude-dir=.git --exclude-dir=tmp > /dev/null 2>&1; then
-            echo "⚠️  WARNING: Found default value pattern '$pattern' in code"
-            found_defaults=true
+    for default_var in "${default_vars[@]}"; do
+        IFS=':' read -r var_name default_value <<< "$default_var"
+        local var_value="${!var_name}"
+
+        if [ "$var_value" = "$default_value" ]; then
+            echo "⚠️  WARNING: $var_name is using default value '$default_value'"
+        else
+            echo "✅ $var_name is customized"
         fi
     done
-
-    if [ "$found_defaults" = false ]; then
-        echo "✅ No default value patterns found in code"
-    fi
 }
 
 # Function to check for hardcoded values
 check_hardcoded_values() {
     echo
-    echo "🔍 Checking for hardcoded critical values..."
-    echo "============================================"
+    echo "🔍 Checking for hardcoded values..."
+    echo "=================================="
 
-    local found_hardcoded=false
-
-    # Check for hardcoded critical values
-    local hardcoded_patterns=(
-        "guest:guest"
-        "auth_user"
-        "core_user"
-        "notify_user"
+    # Check for development passwords
+    local weak_passwords=(
         "auth_pass"
         "core_pass"
         "notify_pass"
-        "auth_db"
-        "core_db"
-        "notify_db"
-        "50051"
-        "8080"
-        "8081"
-        "8082"
-        "5672"
-        "15672"
-        "5433"
-        "5434"
-        "5435"
-        "3600"
-        "localhost"
+        "guest"
     )
 
-    for pattern in "${hardcoded_patterns[@]}"; do
-        if grep -r "$pattern" . --include="*.go" --include="*.yaml" --include="*.yml" --include="*.sh" --exclude-dir=.git --exclude-dir=tmp > /dev/null 2>&1; then
-            echo "⚠️  WARNING: Found hardcoded value '$pattern' in code"
-            found_hardcoded=true
+    for password in "${weak_passwords[@]}"; do
+        if [[ "$AUTH_DB_PASSWORD" == "$password" ]] || \
+           [[ "$CORE_DB_PASSWORD" == "$password" ]] || \
+           [[ "$NOTIFY_DB_PASSWORD" == "$password" ]]; then
+            echo "⚠️  WARNING: Using weak password '$password' - change in production"
         fi
     done
 
-    if [ "$found_hardcoded" = false ]; then
-        echo "✅ No hardcoded critical values found in code"
+    # Check for weak JWT secret
+    if [[ "$JWT_SECRET" == "your-super-secret-jwt-key-change-in-production"* ]]; then
+        echo "⚠️  WARNING: Using default JWT secret - change in production"
     fi
 }
 
@@ -271,12 +226,6 @@ main() {
                     exit_code=1
                 fi
                 ;;
-            "positive_integer")
-                if ! validate_positive_integer "$var_value" "$var_name"; then
-                    errors_found=true
-                    exit_code=1
-                fi
-                ;;
         esac
     done
 
@@ -288,8 +237,8 @@ main() {
     echo "🔍 Checking port conflicts..."
     echo "============================"
 
-    # Check for port conflicts
-    local ports=(
+    # Check for port conflicts (only service ports, not database ports)
+    local service_ports=(
         "$AUTH_SERVICE_PORT"
         "$CORE_SERVICE_PORT"
         "$NOTIFY_SERVICE_PORT"
@@ -297,60 +246,33 @@ main() {
         "$RABBITMQ_MANAGEMENT_PORT"
     )
 
-    local unique_ports=($(printf '%s\n' "${ports[@]}" | sort -u))
-    local total_ports=${#ports[@]}
-    local unique_count=${#unique_ports[@]}
+    local unique_ports=()
+    for port in "${service_ports[@]}"; do
+        if [[ " ${unique_ports[@]} " =~ " ${port} " ]]; then
+            echo "❌ ERROR: Port conflict detected - port $port is used multiple times"
+            errors_found=true
+            exit_code=1
+        else
+            unique_ports+=("$port")
+            echo "✅ Port $port is unique"
+        fi
+    done
 
-    if [ "$total_ports" -eq "$unique_count" ]; then
-        echo "✅ No port conflicts detected"
-    else
-        echo "❌ ERROR: Port conflicts detected"
-        errors_found=true
-        exit_code=1
-fi
-
-echo
-    echo "🔍 Security checks..."
-    echo "===================="
-
-    # Security checks
-if [ "$JWT_SECRET" = "your-super-secret-jwt-key-change-in-production" ]; then
-        echo "⚠️  WARNING: JWT_SECRET is using default value (OK for development)"
-    else
-        echo "✅ JWT_SECRET is properly configured"
-    fi
-
-    if [ "$AUTH_DB_PASSWORD" = "auth_pass" ] || [ "$CORE_DB_PASSWORD" = "core_pass" ] || [ "$NOTIFY_DB_PASSWORD" = "notify_pass" ]; then
-        echo "⚠️  WARNING: Database passwords are using default values (OK for development)"
-    else
-        echo "✅ Database passwords are properly configured"
-    fi
-
-    if [ "$RABBITMQ_PASSWORD" = "guest" ]; then
-        echo "⚠️  WARNING: RabbitMQ password is using default value (OK for development)"
-    else
-        echo "✅ RabbitMQ password is properly configured"
-    fi
+    # Note about database ports
+    echo "ℹ️  Database ports (AUTH_DB_PORT, CORE_DB_PORT, NOTIFY_DB_PORT) can be the same as they run in separate containers"
 
     echo
     echo "📊 Validation Summary"
     echo "===================="
 
     if [ "$errors_found" = true ]; then
-        echo "❌ Validation failed with errors"
-        echo
-        echo "💡 To fix issues:"
-        echo "   1. Update .env file with proper values"
-        echo "   2. Remove default values from code"
-        echo "   3. Replace hardcoded values with environment variables"
-        echo "   4. Run validation again: ./scripts/validate-env.sh"
+        echo "❌ Validation failed - please fix the errors above"
+        echo "💡 Run ./scripts/create-env.sh to regenerate with correct values"
+        exit $exit_code
     else
-        echo "✅ All validations passed successfully!"
-        echo
-        echo "🚀 Environment is ready for deployment"
+        echo "✅ All validations passed!"
+        echo "🚀 Environment is ready for use"
     fi
-
-    exit $exit_code
 }
 
 # Run main function

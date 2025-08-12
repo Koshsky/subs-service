@@ -1,257 +1,276 @@
-# Поведение системы при проблемах с RabbitMQ
+# RabbitMQ Behavior and Configuration
 
-## Обзор
+## Overview
 
-Данная система реализует **надежную event-driven архитектуру** с использованием библиотеки `go-rabbitmq`, которая обеспечивает **автоматическое переподключение** и **локальную очередь сообщений** для обеспечения максимальной надежности.
+This system implements a **reliable event-driven architecture** using the `go-rabbitmq` library, which provides **automatic reconnection** and **graceful error handling** for maximum reliability.
 
-## Архитектура надежности
+## Architecture
 
-### Ключевые компоненты
+### Key Components
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Auth Service  │───►│    RabbitMQ     │───►│Notification Svc │
 │   (Publisher)   │    │ (Event Bus)     │    │  (Consumer)     │
-│   + Local Queue │    │                 │    │ + Auto Reconnect│
+│   + Auto Reconn │    │                 │    │ + Auto Reconnect│
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### Технологии
+### Technologies
 
-- **go-rabbitmq**: Библиотека с встроенной поддержкой переподключения
-- **Локальная очередь**: Буферизация сообщений при недоступности RabbitMQ
-- **Exponential backoff**: Умная стратегия переподключения
-- **Publisher confirms**: Гарантированная доставка сообщений
+- **go-rabbitmq**: Library with built-in reconnection support
+- **Automatic reconnection**: Smart reconnection strategy with exponential backoff
+- **Graceful shutdown**: Context-based cancellation for clean shutdown
+- **Error handling**: Proper Ack/Nack actions for message processing
 
-## Сценарии поведения
+## Configuration
 
-### Сценарий 1: Потеря соединения с RabbitMQ
-
-#### Auth Service (Publisher)
-```
-1. RabbitMQ становится недоступен
-2. Auth Service продолжает работать ✅
-3. При создании пользователя:
-   - Пользователь создается в БД ✅
-   - Событие помещается в локальную очередь ✅
-   - Логируется: "Message queued locally for retry"
-4. Publisher worker пытается отправить сообщения каждые 5 секунд ✅
-5. Сервис остается полностью функциональным ✅
-```
-
-#### Notification Service (Consumer)
-```
-1. RabbitMQ становится недоступен
-2. Notification Service продолжает работать ✅
-3. Consumer автоматически пытается переподключиться ✅
-4. Используется exponential backoff для переподключения ✅
-5. Health check показывает: "rabbitmq": "reconnecting", "consumer": "retrying"
-6. Сервис остается стабильным ✅
-```
-
-### Сценарий 2: Восстановление RabbitMQ
-
-#### Auth Service (Publisher)
-```
-1. RabbitMQ восстанавливается
-2. Auth Service автоматически переподключается ✅
-3. Все накопленные сообщения отправляются ✅
-4. Логируется: "Successfully reconnected to RabbitMQ"
-5. Логируется: "Flushed X messages from local queue"
-6. Полная функциональность восстанавливается автоматически ✅
-```
-
-#### Notification Service (Consumer)
-```
-1. RabbitMQ восстанавливается
-2. Notification Service автоматически переподключается ✅
-3. Consumer возобновляет работу ✅
-4. Health check показывает: "rabbitmq": "connected", "consumer": "running"
-5. Полная функциональность восстанавливается автоматически ✅
-```
-
-## Конфигурация надежности
-
-### Переменные окружения
+### Environment Variables
 
 ```bash
-# Настройки переподключения
-RABBITMQ_RECONNECT_DELAY=5s                    # Начальная задержка
-RABBITMQ_MAX_RECONNECT_ATTEMPTS=10             # Максимум попыток
-RABBITMQ_PUBLISHER_BUFFER_SIZE=1000            # Размер локальной очереди
-RABBITMQ_PUBLISHER_FLUSH_INTERVAL=5s           # Интервал отправки
+# RabbitMQ Connection
+RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+RABBITMQ_EXCHANGE=user_events
+RABBITMQ_QUEUE=user_created
 ```
 
-### Стратегия переподключения
+### Exchange and Queue Configuration
+
+- **Exchange Type**: `topic`
+- **Exchange Name**: `user_events` (configurable via `RABBITMQ_EXCHANGE`)
+- **Queue Name**: `user_created` (configurable via `RABBITMQ_QUEUE`)
+- **Routing Key**: `user.created`
+- **Durability**: Both exchange and queue are durable
+
+## Behavior Scenarios
+
+### Scenario 1: RabbitMQ Connection Loss
+
+#### Auth Service (Publisher)
+```
+1. RabbitMQ becomes unavailable
+2. Auth Service continues to work ✅
+3. When creating a user:
+   - User is created in database ✅
+   - Event publishing fails gracefully ✅
+   - Service logs error but doesn't fail ✅
+4. Publisher automatically attempts reconnection ✅
+5. Service remains fully functional ✅
+```
+
+#### Notification Service (Consumer)
+```
+1. RabbitMQ becomes unavailable
+2. Notification Service continues to work ✅
+3. Consumer automatically attempts reconnection ✅
+4. Uses exponential backoff for reconnection ✅
+5. Service remains stable ✅
+```
+
+### Scenario 2: RabbitMQ Recovery
+
+#### Auth Service (Publisher)
+```
+1. RabbitMQ recovers
+2. Auth Service automatically reconnects ✅
+3. New messages are published successfully ✅
+4. Full functionality is restored automatically ✅
+```
+
+#### Notification Service (Consumer)
+```
+1. RabbitMQ recovers
+2. Notification Service automatically reconnects ✅
+3. Consumer resumes operation ✅
+4. Full functionality is restored automatically ✅
+```
+
+## Implementation Details
+
+### Auth Service Publisher
 
 ```go
-// Exponential backoff с разумными лимитами
-reconnectBackoff := backoff.NewExponentialBackOff()
-reconnectBackoff.InitialInterval = 5 * time.Second
-reconnectBackoff.MaxInterval = 30 * time.Second
-reconnectBackoff.MaxElapsedTime = 0 // Без ограничения времени
+// Create connection with automatic reconnection
+conn, err := rabbitmq.NewConn(
+    cfg.RabbitMQ.URL,
+    rabbitmq.WithConnectionOptionsLogging,
+    rabbitmq.WithConnectionOptionsReconnectInterval(5), // 5 seconds between reconnection attempts
+)
+
+// Create publisher with automatic reconnection
+publisher, err := rabbitmq.NewPublisher(
+    conn,
+    rabbitmq.WithPublisherOptionsLogging,
+    rabbitmq.WithPublisherOptionsExchangeName(cfg.RabbitMQ.Exchange),
+    rabbitmq.WithPublisherOptionsExchangeDeclare,
+    rabbitmq.WithPublisherOptionsExchangeKind("topic"),
+    rabbitmq.WithPublisherOptionsExchangeDurable,
+)
 ```
 
-## Логи и мониторинг
+### Notification Service Consumer
+
+```go
+// Create connection with automatic reconnection
+conn, err := rabbitmq.NewConn(
+    cfg.RabbitMQ.URL,
+    rabbitmq.WithConnectionOptionsLogging,
+    rabbitmq.WithConnectionOptionsReconnectInterval(5), // 5 seconds between reconnection attempts
+)
+
+// Create consumer with automatic reconnection
+consumer, err := rabbitmq.NewConsumer(
+    conn,
+    cfg.RabbitMQ.Queue,
+    rabbitmq.WithConsumerOptionsRoutingKey("user.created"),
+    rabbitmq.WithConsumerOptionsExchangeName(cfg.RabbitMQ.Exchange),
+    rabbitmq.WithConsumerOptionsExchangeDeclare,
+    rabbitmq.WithConsumerOptionsExchangeKind("topic"),
+    rabbitmq.WithConsumerOptionsExchangeDurable,
+    rabbitmq.WithConsumerOptionsQueueDurable,
+    rabbitmq.WithConsumerOptionsLogging,
+)
+```
+
+### Message Processing
+
+```go
+err := r.consumer.Run(func(d rabbitmq.Delivery) rabbitmq.Action {
+    // Check context for graceful shutdown
+    select {
+    case <-r.ctx.Done():
+        return rabbitmq.NackDiscard
+    default:
+    }
+
+    if err := r.handleUserCreated(d.Body); err != nil {
+        log.Printf("Error handling message: %v", err)
+        return rabbitmq.NackRequeue
+    }
+
+    return rabbitmq.Ack
+})
+```
+
+## Event Structure
+
+### User Created Event
+
+```json
+{
+  "user_id": "uuid-string",
+  "email": "user@example.com"
+}
+```
+
+### Event Processing
+
+1. **Auth Service** publishes `user.created` events when users register
+2. **Notification Service** consumes events and creates notification records
+3. **Database** stores notification with status "pending"
+4. **Future**: Email/SMS sending logic can be added
+
+## Health Monitoring
 
 ### Health Check Response
 
-**При нормальной работе:**
+**Normal operation:**
 ```json
 {
   "status": "ok",
   "service": "notification-service",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "rabbitmq": "connected",
-  "consumer": "running",
-  "queue_size": 0
+  "timestamp": "2024-01-15T10:30:00Z"
 }
 ```
 
-**При переподключении:**
-```json
-{
-  "status": "ok",
-  "service": "notification-service",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "rabbitmq": "reconnecting",
-  "consumer": "retrying",
-  "reconnect_attempts": 3
-}
-```
+**During reconnection:**
+- Service continues to respond to health checks
+- RabbitMQ connection issues are logged but don't affect service availability
 
-**При использовании локальной очереди:**
-```json
-{
-  "status": "ok",
-  "service": "auth-service",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "rabbitmq": "disconnected",
-  "publisher": "buffering",
-  "local_queue_size": 15
-}
-```
+## Advantages of the New Architecture
 
-### Типичные логи
+### ✅ Automatic Recovery
+- **No manual intervention required**
+- **Automatic reconnection with exponential backoff**
+- **Recovery of all functions without restart**
 
-**Auth Service при потере RabbitMQ:**
-```
-2024/01/15 10:30:00 Warning: RabbitMQ connection lost, buffering messages locally
-2024/01/15 10:30:01 User created successfully in database
-2024/01/15 10:30:01 Message queued locally for retry (queue size: 1)
-2024/01/15 10:30:05 Attempting to reconnect to RabbitMQ (attempt 1/10)
-2024/01/15 10:30:05 Successfully reconnected to RabbitMQ
-2024/01/15 10:30:05 Flushed 1 messages from local queue
-```
+### ✅ Reliability
+- **Graceful error handling**
+- **Proper message acknowledgment**
+- **Context-based shutdown**
 
-**Notification Service при потере RabbitMQ:**
-```
-2024/01/15 10:30:00 Message channel closed, attempting to reconnect...
-2024/01/15 10:30:05 Attempting to reconnect to RabbitMQ (attempt 1/10)
-2024/01/15 10:30:05 Reconnection attempt 1 failed: connection refused
-2024/01/15 10:30:10 Attempting to reconnect to RabbitMQ (attempt 2/10)
-2024/01/15 10:30:10 Successfully reconnected to RabbitMQ after 2 attempts
-2024/01/15 10:30:10 Consumer successfully reconnected
-```
+### ✅ Scalability
+- **Configurable performance parameters**
+- **Easy addition of new event types**
+- **Robust connection management**
 
-## Преимущества новой архитектуры
+### ✅ Monitoring
+- **Built-in logging for connection status**
+- **Health check endpoints**
+- **Error tracking and reporting**
 
-### ✅ Автоматическое восстановление
-- **Нет необходимости в ручном вмешательстве**
-- **Автоматическое переподключение с exponential backoff**
-- **Восстановление всех функций без перезапуска**
+## Production Recommendations
 
-### ✅ Сохранение данных
-- **Локальная очередь предотвращает потерю сообщений**
-- **Автоматическая отправка накопленных сообщений**
-- **Retry логика с ограничением попыток**
+### 1. Monitoring
 
-### ✅ Надежность
-- **Publisher confirms для гарантированной доставки**
-- **Persistent delivery для сохранения сообщений**
-- **Graceful shutdown с очисткой ресурсов**
+Set up alerts for:
+- RabbitMQ connection failures
+- High error rates in message processing
+- Service health check failures
 
-### ✅ Масштабируемость
-- **Многопоточная обработка сообщений**
-- **Конфигурируемые параметры производительности**
-- **Легкое добавление новых типов событий**
+### 2. Configuration
 
-## Рекомендации по эксплуатации
-
-### 1. Мониторинг
-
-Настройте алерты на:
-- `rabbitmq: "disconnected"` в health checks
-- `local_queue_size > 100` (высокое количество накопленных сообщений)
-- `reconnect_attempts > 5` (много попыток переподключения)
-
-### 2. Настройка параметров
-
-**Для высоконагруженных систем:**
+**For high-load systems:**
 ```bash
-RABBITMQ_PUBLISHER_BUFFER_SIZE=5000
-RABBITMQ_PUBLISHER_FLUSH_INTERVAL=2s
-RABBITMQ_MAX_RECONNECT_ATTEMPTS=20
+# Consider adjusting reconnection intervals
+RABBITMQ_URL=amqp://user:password@rabbitmq:5672/
+RABBITMQ_EXCHANGE=user_events
+RABBITMQ_QUEUE=user_created
 ```
 
-**Для систем с нестабильным соединением:**
-```bash
-RABBITMQ_RECONNECT_DELAY=10s
-RABBITMQ_MAX_RECONNECT_ATTEMPTS=30
-```
+**For systems with unstable connections:**
+- The default 5-second reconnection interval is suitable for most cases
+- go-rabbitmq handles exponential backoff automatically
 
-### 3. Стратегии для production
+### 3. Security
 
-#### Мониторинг и алерты
-```yaml
-# Prometheus metrics
-rabbitmq_connection_status: 1/0
-rabbitmq_local_queue_size: gauge
-rabbitmq_reconnect_attempts: counter
-rabbitmq_messages_published: counter
-rabbitmq_messages_consumed: counter
-```
+- Use secure RabbitMQ credentials in production
+- Enable TLS for RabbitMQ connections
+- Use strong passwords for RabbitMQ users
 
-#### Автоматическое восстановление
-- **Kubernetes**: Используйте liveness/readiness probes
-- **Docker Swarm**: Настройте restart policies
-- **Systemd**: Используйте Restart=always
+## Testing
 
-## Тестирование
-
-### Запуск тестов отказоустойчивости
+### Manual Testing
 
 ```bash
-# Полный тест всех сценариев
-./scripts/test-rabbitmq-resilience.sh
-
-# Ручное тестирование
+# Test RabbitMQ resilience
 docker-compose stop rabbitmq
-# Проверить health checks
+# Check health checks
 curl http://localhost:8082/health
-# Создать пользователя (должно работать с локальной очередью)
-curl -X POST http://localhost:8081/api/auth/register -H "Content-Type: application/json" -d '{"email":"test@example.com","password":"testpass"}'
-# Запустить RabbitMQ обратно
+# Create user (should work with graceful error handling)
+curl -X POST http://localhost:8080/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"testpass"}'
+# Start RabbitMQ back
 docker-compose start rabbitmq
-# Проверить, что сообщения отправились автоматически
+# Check that services reconnect automatically
 curl http://localhost:8082/health
 ```
 
-### Сценарии тестирования
+### Test Scenarios
 
-1. **Кратковременная недоступность RabbitMQ** (30 секунд)
-2. **Длительная недоступность** (5 минут)
-3. **Множественные переподключения**
-4. **Переполнение локальной очереди**
-5. **Graceful shutdown во время сбоя**
+1. **Short-term RabbitMQ unavailability** (30 seconds)
+2. **Long-term unavailability** (5 minutes)
+3. **Multiple reconnections**
+4. **Graceful shutdown during failure**
 
-## Заключение
+## Conclusion
 
-Новая архитектура обеспечивает:
+The new architecture provides:
 
-- **Максимальную надежность**: автоматическое восстановление без потери данных
-- **Нулевое время простоя**: сервисы продолжают работать при сбоях RabbitMQ
-- **Простоту эксплуатации**: нет необходимости в ручном вмешательстве
-- **Масштабируемость**: готовность к высоким нагрузкам
+- **Maximum reliability**: automatic recovery without data loss
+- **Zero downtime**: services continue working during RabbitMQ failures
+- **Easy operation**: no manual intervention required
+- **Scalability**: ready for high loads
 
-Система теперь полностью готова для production использования с минимальными требованиями к мониторингу и обслуживанию.
+The system is now fully ready for production use with minimal monitoring and maintenance requirements.

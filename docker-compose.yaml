@@ -201,12 +201,12 @@ services:
       rabbitmq:
         condition: service_healthy
     ports:
-      - "${NOTIFY_PORT:-8082}:${NOTIFY_PORT:-8082}"
+      - "${NOTIFY_SERVICE_PORT}:${NOTIFY_SERVICE_PORT}"
     networks:
       - subs_net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:${NOTIFY_PORT:-8082}/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:${NOTIFY_SERVICE_PORT}/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
