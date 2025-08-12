@@ -2,9 +2,9 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"time"
 
+	"github.com/Koshsky/subs-service/notification-service/internal/utils"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -46,26 +46,26 @@ func LoadConfig() *Config {
 	godotenv.Load()
 
 	db := DBConfig{
-		Host:     getEnv("NOTIFY_DB_HOST", ""),
-		Port:     getEnv("NOTIFY_DB_PORT", ""),
-		User:     getEnv("NOTIFY_DB_USER", ""),
-		Password: getEnv("NOTIFY_DB_PASSWORD", ""),
-		DBName:   getEnv("NOTIFY_DB_NAME", ""),
-		SSLMode:  getEnv("NOTIFY_DB_SSLMODE", ""),
+		Host:     utils.GetEnv("NOTIFY_DB_HOST", "notify-db"),
+		Port:     utils.GetEnvRequiredWithValidation("NOTIFY_DB_PORT", utils.ValidatePort),
+		User:     utils.GetEnvRequired("NOTIFY_DB_USER"),
+		Password: utils.GetEnvRequired("NOTIFY_DB_PASSWORD"),
+		DBName:   utils.GetEnvRequired("NOTIFY_DB_NAME"),
+		SSLMode:  utils.GetEnv("NOTIFY_DB_SSLMODE", "disable"),
 	}
 
 	rabbitmq := RabbitMQConfig{
-		URL:      getEnv("RABBITMQ_URL", ""),
-		Exchange: getEnv("RABBITMQ_EXCHANGE", ""),
-		Queue:    getEnv("RABBITMQ_QUEUE", ""),
+		URL:      utils.GetEnvRequired("RABBITMQ_URL"),
+		Exchange: utils.GetEnvRequired("RABBITMQ_EXCHANGE"),
+		Queue:    utils.GetEnvRequired("RABBITMQ_QUEUE"),
 	}
 
-	shutdownTimeout, _ := time.ParseDuration(getEnv("NOTIFY_SHUTDOWN_TIMEOUT", "10s"))
+	shutdownTimeout, _ := time.ParseDuration(utils.GetEnv("NOTIFY_SHUTDOWN_TIMEOUT", "10s"))
 
 	return &Config{
 		Database:        db,
 		RabbitMQ:        rabbitmq,
-		Port:            getEnv("NOTIFY_SERVICE_PORT", ""),
+		Port:            utils.GetEnvRequiredWithValidation("NOTIFY_SERVICE_PORT", utils.ValidatePort),
 		ShutdownTimeout: shutdownTimeout,
 	}
 }
@@ -73,12 +73,4 @@ func LoadConfig() *Config {
 // ConnectDB connects to the notification database
 func (c *Config) ConnectDB() (*gorm.DB, error) {
 	return gorm.Open(postgres.Open(c.Database.ConnectionString()), &gorm.Config{})
-}
-
-// getEnv gets environment variable with fallback
-func getEnv(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
 }

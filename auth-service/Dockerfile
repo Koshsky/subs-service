@@ -1,7 +1,11 @@
 FROM golang:1.24-alpine
 
+RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
+    wget -qO/bin/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64 && \
+    chmod +x /bin/grpc_health_probe
+
 # Install build dependencies and prepare certs directory
-RUN apk add --no-cache git libc6-compat wget && \
+RUN apk add --no-cache git libc6-compat wget curl netcat-openbsd && \
     mkdir -p /app/certs
 
 WORKDIR /app
