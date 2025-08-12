@@ -31,7 +31,7 @@ func main() {
 		}
 	}()
 
-	// Инициализируем RabbitMQ сервис
+	// Initialize RabbitMQ service
 	rabbitmqService, err := services.NewRabbitMQService(cfg)
 	if err != nil {
 		log.Printf("Warning: Failed to initialize RabbitMQ service: %v", err)
@@ -39,7 +39,6 @@ func main() {
 		rabbitmqService = nil
 	} else {
 		defer rabbitmqService.Close()
-		log.Printf("RabbitMQ service initialized successfully")
 	}
 
 	userRepo := repositories.NewUserRepository(database)
@@ -53,10 +52,8 @@ func main() {
 			log.Fatalf("Failed to create TLS credentials: %v", err)
 		}
 		grpcServer = grpc.NewServer(grpc.Creds(creds))
-		log.Printf("Auth service configured with TLS")
 	} else {
 		grpcServer = grpc.NewServer()
-		log.Printf("Auth service configured without TLS (WARNING: Insecure)")
 	}
 
 	authpb.RegisterAuthServiceServer(grpcServer, authServer)

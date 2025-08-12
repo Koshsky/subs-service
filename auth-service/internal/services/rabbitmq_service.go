@@ -3,7 +3,6 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/Koshsky/subs-service/auth-service/internal/config"
 	"github.com/Koshsky/subs-service/auth-service/internal/models"
@@ -23,17 +22,17 @@ type UserCreatedEvent struct {
 }
 
 func NewRabbitMQService(cfg *config.Config) (*RabbitMQService, error) {
-	// Создаем соединение с автоматическим реконнектом
+	// Create connection with automatic reconnection
 	conn, err := rabbitmq.NewConn(
 		cfg.RabbitMQ.URL,
 		rabbitmq.WithConnectionOptionsLogging,
-		rabbitmq.WithConnectionOptionsReconnectInterval(5), // 5 секунд между попытками реконнекта
+		rabbitmq.WithConnectionOptionsReconnectInterval(5), // 5 seconds between reconnection attempts
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RabbitMQ: %v", err)
 	}
 
-	// Создаем publisher с автоматическим реконнектом
+	// Create publisher with automatic reconnection
 	publisher, err := rabbitmq.NewPublisher(
 		conn,
 		rabbitmq.WithPublisherOptionsLogging,
@@ -75,7 +74,6 @@ func (r *RabbitMQService) PublishUserCreated(user *models.User) error {
 		return fmt.Errorf("failed to publish user created event: %v", err)
 	}
 
-	log.Printf("Published user.created event for user: %s", user.Email)
 	return nil
 }
 

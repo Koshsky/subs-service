@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/Koshsky/subs-service/core-service/internal/utils"
 	"github.com/joho/godotenv"
@@ -46,8 +45,6 @@ func LoadConfig() *Config {
 
 	authServicePort := utils.GetEnvRequiredWithValidation("AUTH_SERVICE_PORT", utils.ValidatePort)
 	authServiceAddr := "auth-service:" + authServicePort
-
-	log.Printf("DEBUG: AuthServiceAddr = %s", authServiceAddr)
 
 	return &Config{
 		Database:        db,

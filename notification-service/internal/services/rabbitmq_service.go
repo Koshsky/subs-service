@@ -24,18 +24,18 @@ type RabbitMQService struct {
 func NewRabbitMQService(cfg *config.Config, db *gorm.DB) (*RabbitMQService, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Создаем соединение с автоматическим реконнектом
+	// Create connection with automatic reconnection
 	conn, err := rabbitmq.NewConn(
 		cfg.RabbitMQ.URL,
 		rabbitmq.WithConnectionOptionsLogging,
-		rabbitmq.WithConnectionOptionsReconnectInterval(5), // 5 секунд между попытками реконнекта
+		rabbitmq.WithConnectionOptionsReconnectInterval(5), // 5 seconds between reconnection attempts
 	)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("failed to connect to RabbitMQ: %v", err)
 	}
 
-	// Создаем consumer с автоматическим реконнектом
+	// Create consumer with automatic reconnection
 	consumer, err := rabbitmq.NewConsumer(
 		conn,
 		cfg.RabbitMQ.Queue,
@@ -66,10 +66,8 @@ func NewRabbitMQService(cfg *config.Config, db *gorm.DB) (*RabbitMQService, erro
 }
 
 func (r *RabbitMQService) StartConsuming() error {
-	log.Printf("Started consuming messages from queue: %s", r.config.RabbitMQ.Queue)
-
 	err := r.consumer.Run(func(d rabbitmq.Delivery) rabbitmq.Action {
-		// Проверяем контекст для graceful shutdown
+		// Check context for graceful shutdown
 		select {
 		case <-r.ctx.Done():
 			return rabbitmq.NackDiscard
@@ -97,13 +95,11 @@ func (r *RabbitMQService) handleUserCreated(data []byte) error {
 		return fmt.Errorf("failed to unmarshal user created event: %v", err)
 	}
 
-	log.Printf("Received user created event: UserID=%s, Email=%s", event.UserID, event.Email)
-
-	// Создаем уведомление в базе данных
+	// Create notification in database
 	notification := &models.Notification{
 		UserID:  event.UserID,
 		Type:    "user.created",
-		Message: fmt.Sprintf("Добро пожаловать! Ваш аккаунт был успешно создан для email: %s", event.Email),
+		Message: fmt.Sprintf("Welcome! Your account has been successfully created for email: %s", event.Email),
 		Status:  "pending",
 	}
 
@@ -111,16 +107,14 @@ func (r *RabbitMQService) handleUserCreated(data []byte) error {
 		return fmt.Errorf("failed to create notification record: %v", err)
 	}
 
-	log.Printf("Created notification record with ID: %d for user: %s", notification.ID, event.UserID)
-
-	// TODO: Здесь можно добавить логику отправки email/SMS
+	// TODO: Add email/SMS sending logic here
 	log.Printf("Would send welcome email to: %s", event.Email)
 
 	return nil
 }
 
 func (r *RabbitMQService) Close() {
-	// Отменяем контекст для graceful shutdown
+	// Cancel context for graceful shutdown
 	if r.cancel != nil {
 		r.cancel()
 	}

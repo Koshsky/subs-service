@@ -23,7 +23,6 @@ func SetupRouter(
 	authController := controllers.NewAuthController(authClient)
 
 	r := gin.Default()
-	r.Use(middleware.RequestLoggerMiddleware())
 	r.Use(middleware.RateLimiter())
 	r.GET("/health", healthCheck)
 

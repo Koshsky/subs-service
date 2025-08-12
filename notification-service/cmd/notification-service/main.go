@@ -23,7 +23,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to notification database: %v", err)
 	}
-	log.Println("Notification database connection established successfully")
 
 	// Ensure proper database connection pool cleanup on shutdown
 	sqlDB, err := database.DB()
@@ -59,7 +58,6 @@ func main() {
 
 	healthSrv := &http.Server{Addr: ":" + cfg.Port, Handler: healthMux}
 	go func() {
-		log.Printf("Health check server started on port %s", cfg.Port)
 		if err := healthSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Printf("Health check server failed: %v", err)
 		}

@@ -28,41 +28,29 @@ func NewAuthService(repo *repositories.UserRepository, rabbitmqService *RabbitMQ
 }
 
 func (s *AuthService) Register(ctx context.Context, email, password string) (*models.User, error) {
-	startTime := time.Now()
-	log.Printf("[AUTH_SERVICE] [%s] Starting Register for email: %s", startTime.Format("15:04:05.000"), email)
-
 	user := &models.User{
 		Email:    email,
 		Password: password,
 	}
 
 	if err := s.Validator.Struct(user); err != nil {
-		totalDuration := time.Since(startTime)
-		log.Printf("[AUTH_SERVICE] [%s] Validation FAILED after %v: %v", time.Now().Format("15:04:05.000"), totalDuration, err)
 		return nil, err
 	}
 
 	err := s.UserRepo.CreateUser(user)
-
 	if err != nil {
-		totalDuration := time.Since(startTime)
-		log.Printf("[AUTH_SERVICE] [%s] Register FAILED after %v (database error: %v)", time.Now().Format("15:04:05.000"), totalDuration, err)
 		return nil, err
 	}
 
-	// Отправляем событие о создании пользователя
+	// Publish user created event
 	if s.RabbitMQService != nil {
 		if err := s.RabbitMQService.PublishUserCreated(user); err != nil {
-			log.Printf("[AUTH_SERVICE] [%s] Failed to publish user.created event: %v", time.Now().Format("15:04:05.000"), err)
-			// Не возвращаем ошибку, так как основная операция прошла успешно
+			log.Printf("Failed to publish user.created event: %v", err)
+			// Don't return error as main operation was successful
 		}
 	}
 
 	user.Password = ""
-
-	totalDuration := time.Since(startTime)
-	log.Printf("[AUTH_SERVICE] [%s] Register SUCCESS in %v", time.Now().Format("15:04:05.000"), totalDuration)
-
 	return user, nil
 }
 
