@@ -5,17 +5,15 @@ import (
 	"gorm.io/gorm"
 )
 
-// Subscription represents a subscription in the core service database
 type Subscription struct {
 	gorm.Model
 	Service   string     `json:"service_name" gorm:"column:service_name" binding:"required,min=2"`
 	Price     int        `json:"price" gorm:"column:price" binding:"required,min=1"`
-	UserID    uuid.UUID  `json:"user_id" gorm:"column:user_id;type:uuid;not null"` // Reference to user from auth-service
+	UserID    uuid.UUID  `json:"user_id" gorm:"column:user_id;type:uuid;not null"`
 	StartDate MonthYear  `json:"start_date" gorm:"column:start_date" binding:"required"`
 	EndDate   *MonthYear `json:"end_date" gorm:"column:end_date"`
 }
 
-// SubscriptionFilter represents filter parameters for subscription queries
 type SubscriptionFilter struct {
 	UserID     uuid.UUID `form:"user_id" json:"user_id"`
 	Service    string    `form:"service" json:"service"`

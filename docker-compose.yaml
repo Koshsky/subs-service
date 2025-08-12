@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Auth Service Database
   auth-db:
@@ -8,8 +6,8 @@ services:
     env_file: .env
     environment:
       POSTGRES_USER: ${AUTH_DB_USER:-auth_user}
-      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-auth_pass}
-      POSTGRES_DB: ${AUTH_DB_NAME:-auth_db}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+      POSTGRES_DB: ${AUTH_DB_NAME}
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data
     ports:
@@ -29,8 +27,8 @@ services:
     env_file: .env
     environment:
       POSTGRES_USER: ${CORE_DB_USER:-core_user}
-      POSTGRES_PASSWORD: ${CORE_DB_PASSWORD:-core_pass}
-      POSTGRES_DB: ${CORE_DB_NAME:-core_db}
+      POSTGRES_PASSWORD: ${CORE_DB_PASSWORD}
+      POSTGRES_DB: ${CORE_DB_NAME}
     volumes:
       - core_postgres_data:/var/lib/postgresql/data
     ports:
@@ -38,8 +36,50 @@ services:
     networks:
       - subs_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${CORE_DB_USER:-core_user} -d ${CORE_DB_NAME:-core_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${CORE_DB_USER} -d ${CORE_DB_NAME}"]
       interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Notification Service Database
+  notify-db:
+    image: postgres:15-alpine
+    container_name: notify_db
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${NOTIFY_DB_USER:-notify_user}
+      POSTGRES_PASSWORD: ${NOTIFY_DB_PASSWORD}
+      POSTGRES_DB: ${NOTIFY_DB_NAME}
+    volumes:
+      - notify_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+    networks:
+      - subs_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${NOTIFY_DB_USER:-notify_user} -d ${NOTIFY_DB_NAME:-notify_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    env_file: .env
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - subs_net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
       timeout: 5s
       retries: 5
 
@@ -57,7 +97,7 @@ services:
       - subs_net
     command:
       - -path=/migrations
-      - -database=postgres://${AUTH_DB_USER:-auth_user}:${AUTH_DB_PASSWORD:-auth_pass}@auth-db:5432/${AUTH_DB_NAME:-auth_db}?sslmode=disable
+      - -database=postgres://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@auth-db:5432/${AUTH_DB_NAME}?sslmode=disable
       - up
     restart: on-failure
 
@@ -75,7 +115,25 @@ services:
       - subs_net
     command:
       - -path=/migrations
-      - -database=postgres://${CORE_DB_USER:-core_user}:${CORE_DB_PASSWORD:-core_pass}@core-db:5432/${CORE_DB_NAME:-core_db}?sslmode=disable
+      - -database=postgres://${CORE_DB_USER}:${CORE_DB_PASSWORD}@core-db:5432/${CORE_DB_NAME}?sslmode=disable
+      - up
+    restart: on-failure
+
+  # Notification Database Migrator
+  notify-migrator:
+    image: migrate/migrate:v4.16.2
+    container_name: notify_migrator
+    env_file: .env
+    depends_on:
+      notify-db:
+        condition: service_healthy
+    volumes:
+      - ./notification-service/migrations:/migrations
+    networks:
+      - subs_net
+    command:
+      - -path=/migrations
+      - -database=postgres://${NOTIFY_DB_USER}:${NOTIFY_DB_PASSWORD}@notify-db:5432/${NOTIFY_DB_NAME}?sslmode=disable
       - up
     restart: on-failure
 
@@ -83,31 +141,32 @@ services:
     build:
       context: .
       dockerfile: ./auth-service/Dockerfile
-    container_name: subs_auth_service
+    container_name: auth_service
     env_file: .env
     depends_on:
       auth-db:
         condition: service_healthy
       auth-migrator:
         condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
     ports:
-      - "${AUTH_PORT:-50051}:${AUTH_PORT:-50051}"
-      - "${AUTH_HEALTH_PORT:-8081}:8081"
+      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
     networks:
       - subs_net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8081/health || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "netstat -tuln | grep :50051 || exit 1"]
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 10s
 
   core-service:
     build:
       context: .
       dockerfile: ./core-service/Dockerfile
-    container_name: subs_service
+    container_name: core_service
     env_file: .env
     depends_on:
       core-db:
@@ -116,13 +175,38 @@ services:
         condition: service_completed_successfully
       auth-service:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s  # Больше времени, так как зависит от auth-service
     ports:
-      - "${CORE_PORT:-8080}:${CORE_PORT:-8080}"
+      - "${CORE_SERVICE_PORT}:${CORE_SERVICE_PORT}"
+    networks:
+      - subs_net
+    restart: unless-stopped
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./notification-service/Dockerfile
+    container_name: notification_service
+    env_file: .env
+    depends_on:
+      notify-db:
+        condition: service_healthy
+      notify-migrator:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "${NOTIFY_SERVICE_PORT}:${NOTIFY_SERVICE_PORT}"
     networks:
       - subs_net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${CORE_PORT:-8080}/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:${NOTIFY_SERVICE_PORT}/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -131,6 +215,8 @@ services:
 volumes:
   auth_postgres_data:
   core_postgres_data:
+  notify_postgres_data:
+  rabbitmq_data:
 
 networks:
   subs_net:

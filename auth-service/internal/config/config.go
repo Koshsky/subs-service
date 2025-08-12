@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// DBConfig represents database configuration
 type DBConfig struct {
 	Host     string
 	Port     string
@@ -19,15 +18,19 @@ type DBConfig struct {
 	SSLMode  string
 }
 
-// ConnectionString returns the connection string for the database
 func (db *DBConfig) ConnectionString() string {
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		db.Host, db.Port, db.User, db.Password, db.DBName, db.SSLMode)
 }
 
-// Config represents the complete configuration for auth-service
+type RabbitMQConfig struct {
+	URL      string
+	Exchange string
+}
+
 type Config struct {
 	Database    DBConfig
+	RabbitMQ    RabbitMQConfig
 	JWTSecret   string
 	Port        string
 	TLSCertFile string
@@ -35,30 +38,34 @@ type Config struct {
 	EnableTLS   bool
 }
 
-// LoadConfig loads configuration from environment variables
 func LoadConfig() *Config {
 	godotenv.Load()
 
 	db := DBConfig{
 		Host:     utils.GetEnv("AUTH_DB_HOST", "auth-db"),
-		Port:     utils.GetEnv("AUTH_DB_PORT", "5432"),
-		User:     utils.GetEnv("AUTH_DB_USER", "auth_user"),
-		Password: utils.GetEnv("AUTH_DB_PASSWORD", "auth_pass"),
-		DBName:   utils.GetEnv("AUTH_DB_NAME", "auth_db"),
+		Port:     utils.GetEnvRequiredWithValidation("AUTH_DB_PORT", utils.ValidatePort),
+		User:     utils.GetEnvRequired("AUTH_DB_USER"),
+		Password: utils.GetEnvRequired("AUTH_DB_PASSWORD"),
+		DBName:   utils.GetEnvRequired("AUTH_DB_NAME"),
 		SSLMode:  utils.GetEnv("AUTH_DB_SSLMODE", "disable"),
+	}
+
+	rabbitmq := RabbitMQConfig{
+		URL:      utils.GetEnv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672/"),
+		Exchange: utils.GetEnv("RABBITMQ_EXCHANGE", "user_events"),
 	}
 
 	return &Config{
 		Database:    db,
-		JWTSecret:   utils.GetEnv("JWT_SECRET", "your_jwt_secret_key"),
-		Port:        utils.GetEnv("AUTH_PORT", "50051"),
+		RabbitMQ:    rabbitmq,
+		JWTSecret:   utils.GetEnvRequiredWithValidation("JWT_SECRET", utils.ValidateMinLength(32)),
+		Port:        utils.GetEnvRequiredWithValidation("AUTH_SERVICE_PORT", utils.ValidatePort),
 		TLSCertFile: utils.GetEnv("TLS_CERT_FILE", "certs/server-cert.pem"),
 		TLSKeyFile:  utils.GetEnv("TLS_KEY_FILE", "certs/server-key.pem"),
-		EnableTLS:   utils.GetEnv("ENABLE_TLS", "true") == "true",
+		EnableTLS:   utils.GetEnvBool("ENABLE_TLS", false),
 	}
 }
 
-// ConnectDB connects to the auth database
 func (c *Config) ConnectDB() (*gorm.DB, error) {
 	return gorm.Open(postgres.Open(c.Database.ConnectionString()), &gorm.Config{})
 }

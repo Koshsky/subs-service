@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// DBConfig represents database configuration
 type DBConfig struct {
 	Host     string
 	Port     string
@@ -19,13 +18,11 @@ type DBConfig struct {
 	SSLMode  string
 }
 
-// ConnectionString returns the connection string for the database
 func (db *DBConfig) ConnectionString() string {
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		db.Host, db.Port, db.User, db.Password, db.DBName, db.SSLMode)
 }
 
-// Config represents the complete configuration for core-service
 type Config struct {
 	Database        DBConfig
 	Port            string
@@ -34,29 +31,30 @@ type Config struct {
 	EnableTLS       bool
 }
 
-// LoadConfig loads configuration from environment variables
 func LoadConfig() *Config {
 	godotenv.Load()
 
 	db := DBConfig{
 		Host:     utils.GetEnv("CORE_DB_HOST", "core-db"),
-		Port:     utils.GetEnv("CORE_DB_PORT", "5432"),
-		User:     utils.GetEnv("CORE_DB_USER", "core_user"),
-		Password: utils.GetEnv("CORE_DB_PASSWORD", "core_pass"),
-		DBName:   utils.GetEnv("CORE_DB_NAME", "core_db"),
+		Port:     utils.GetEnvRequiredWithValidation("CORE_DB_PORT", utils.ValidatePort),
+		User:     utils.GetEnvRequired("CORE_DB_USER"),
+		Password: utils.GetEnvRequired("CORE_DB_PASSWORD"),
+		DBName:   utils.GetEnvRequired("CORE_DB_NAME"),
 		SSLMode:  utils.GetEnv("CORE_DB_SSLMODE", "disable"),
 	}
 
+	authServicePort := utils.GetEnvRequiredWithValidation("AUTH_SERVICE_PORT", utils.ValidatePort)
+	authServiceAddr := "auth-service:" + authServicePort
+
 	return &Config{
 		Database:        db,
-		Port:            utils.GetEnv("CORE_PORT", "8080"),
-		AuthServiceAddr: utils.GetEnv("AUTH_SERVICE_ADDR", "localhost:50051"),
+		Port:            utils.GetEnvRequiredWithValidation("CORE_SERVICE_PORT", utils.ValidatePort),
+		AuthServiceAddr: authServiceAddr,
 		TLSCertFile:     utils.GetEnv("TLS_CERT_FILE", "certs/server-cert.pem"),
-		EnableTLS:       utils.GetEnv("ENABLE_TLS", "true") == "true",
+		EnableTLS:       utils.GetEnvBool("ENABLE_TLS", false),
 	}
 }
 
-// ConnectDB connects to the core database
 func (c *Config) ConnectDB() (*gorm.DB, error) {
 	return gorm.Open(postgres.Open(c.Database.ConnectionString()), &gorm.Config{})
 }

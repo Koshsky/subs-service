@@ -41,6 +41,7 @@ func (ac *AuthController) Register(c *gin.Context) {
 	}
 
 	resp, err := ac.AuthClient.Register(c.Request.Context(), credentials.Email, credentials.Password)
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to register user",

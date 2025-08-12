@@ -1,7 +1,7 @@
 FROM golang:1.24-alpine
 
 # Install build dependencies and prepare certs directory
-RUN apk add --no-cache git libc6-compat wget && \
+RUN apk add --no-cache git libc6-compat curl && \
     mkdir -p /app/certs
 
 WORKDIR /app

@@ -14,9 +14,6 @@ docker ps
 
 ## Быстрое тестирование
 ```bash
-# Быстрый тест основных функций
-./scripts/quick-test.sh
-
 # Полное тестирование всех endpoint'ов
 ./scripts/test-api.sh
 ```
@@ -146,10 +143,10 @@ curl http://localhost:8080/internal/debug/pprof/profile
 ### Логи контейнеров
 ```bash
 # Логи core-service
-docker logs subs_service
+docker logs core_service
 
 # Логи auth-service
-docker logs subs_auth_service
+docker logs auth_service
 
 # Логи базы данных
 docker logs subs_db

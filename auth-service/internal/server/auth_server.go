@@ -18,7 +18,6 @@ func NewAuthServer(authService *services.AuthService) *AuthServer {
 	}
 }
 
-// ValidateToken checks if the token is valid and returns the user and error if it's not
 func (s *AuthServer) ValidateToken(ctx context.Context, req *authpb.TokenRequest) (*authpb.UserResponse, error) {
 	claims, err := s.AuthService.ValidateToken(ctx, req.Token)
 	if err != nil {
@@ -51,9 +50,9 @@ func (s *AuthServer) ValidateToken(ctx context.Context, req *authpb.TokenRequest
 	}, nil
 }
 
-// Register creates a new user and returns the user and error if it's not
 func (s *AuthServer) Register(ctx context.Context, req *authpb.RegisterRequest) (*authpb.RegisterResponse, error) {
 	user, err := s.AuthService.Register(ctx, req.Email, req.Password)
+
 	if err != nil {
 		return &authpb.RegisterResponse{
 			Success: false,
@@ -61,15 +60,16 @@ func (s *AuthServer) Register(ctx context.Context, req *authpb.RegisterRequest) 
 		}, nil
 	}
 
-	return &authpb.RegisterResponse{
+	response := &authpb.RegisterResponse{
 		UserId:  user.ID.String(),
 		Email:   user.Email,
 		Success: true,
 		Message: "User created successfully",
-	}, nil
+	}
+
+	return response, nil
 }
 
-// Login logs in a user and returns the token and user and error if it's not
 func (s *AuthServer) Login(ctx context.Context, req *authpb.LoginRequest) (*authpb.LoginResponse, error) {
 	token, user, err := s.AuthService.Login(ctx, req.Email, req.Password)
 	if err != nil {

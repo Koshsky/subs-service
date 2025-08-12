@@ -4,12 +4,12 @@ package authpb;
 
 option go_package = "github.com/Koshsky/subs-service/core-service/internal/corepb";
 
-// Запрос для валидации токена
+// Token validation request
 message TokenRequest {
   string token = 1;
 }
 
-// Ответ с информацией о пользователе
+// Response with user information
 message UserResponse {
   string user_id = 1;
   string email = 2;
@@ -17,13 +17,13 @@ message UserResponse {
   string error = 4;
 }
 
-// Запрос для регистрации пользователя
+// Request for user registration
 message RegisterRequest {
   string email = 1;
   string password = 2;
 }
 
-// Ответ для регистрации пользователя
+// Response for user registration
 message RegisterResponse {
   string user_id = 1;
   string email = 2;
@@ -32,13 +32,13 @@ message RegisterResponse {
   string message = 5;
 }
 
-// Запрос для логина
+// Login request
 message LoginRequest {
   string email = 1;
   string password = 2;
 }
 
-// Ответ для логина
+// Login response
 message LoginResponse {
   string token = 1;
   string user_id = 2;
@@ -48,14 +48,14 @@ message LoginResponse {
   string message = 6;
 }
 
-// Сервис аутентификации
+// Authentication service
 service AuthService {
-  // Валидация токена и получение информации о пользователе
+  // Token validation and user information retrieval
   rpc ValidateToken(TokenRequest) returns (UserResponse);
 
-  // Регистрация нового пользователя
+  // New user registration
   rpc Register(RegisterRequest) returns (RegisterResponse);
 
-  // Логин пользователя
+  // User login
   rpc Login(LoginRequest) returns (LoginResponse);
 }

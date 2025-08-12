@@ -17,6 +17,8 @@ func SetupRouter(
 	authClient controllers.AuthClient,
 	validateToken middleware.ValidateTokenFunc,
 ) *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
+
 	subController := controllers.NewSubscriptionController(subService)
 	authController := controllers.NewAuthController(authClient)
 

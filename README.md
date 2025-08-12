@@ -17,25 +17,45 @@
 ## 🏗️ Архитектура
 
 ```
-┌─────────────────┐    ┌─────────────────┐
-│   Auth Service  │    │   Core Service  │
-│   (gRPC:50051)  │◄──►│   (HTTP:8080)   │
-└─────────┬───────┘    └─────────┬───────┘
-          │                      │
-          ▼                      ▼
-┌─────────────────┐    ┌─────────────────┐
-│   Auth DB       │    │   Core DB       │
-│ (users, auth)   │    │ (subscriptions) │
-│ Port: 5433      │    │ Port: 5434      │
-└─────────────────┘    └─────────────────┘
+                        ┌─────────────────┐    ┌─────────────────┐
+                        │   Auth Service  │    │   Core Service  │
+          ┌────────────►│   (gRPC:50051)  │◄──►│   (HTTP:8080)   │
+          |             └─────────┬───────┘    └─────────┬───────┘
+          |                       │                      │
+          |                       ▼                      ▼
+┌─────────────────┐     ┌─────────────────┐    ┌─────────────────┐
+│    RabbitMQ     │     │   Auth DB       │    │   Core DB       │
+│ (Event Bus)     │     │ (users, auth)   │    │ (subscriptions) │
+│ Port: 5672      │     │ Port: 5433      │    │ Port: 5434      │
+└─────────┬───────┘     └─────────────────┘    └─────────────────┘
+          │
+          ▼
+┌─────────────────┐
+│Notification Svc │
+│   (HTTP:8082)   │
+└─────────┬───────┘
+          │
+          ▼
+┌─────────────────┐
+│  Notification DB│
+│ (notifications) │
+│ Port: 5435      │
+└─────────────────┘
+
+Поток событий:
+Auth Service → RabbitMQ → Notification Service
+(user.created) → (event bus) → (processes event)
 ```
 
 ### Сервисы
 
-- **Auth Service**: Аутентификация пользователей, JWT токены, gRPC API
+- **Auth Service**: Аутентификация пользователей, JWT токены, gRPC API, отправка событий в RabbitMQ
 - **Core Service**: Основная бизнес-логика управления подписками, REST API
+- **Notification Service**: Обработка событий из RabbitMQ и отправка уведомлений, HTTP API
 - **Auth Database**: PostgreSQL база для пользователей и аутентификации
 - **Core Database**: PostgreSQL база для подписок и бизнес-данных
+- **Notification Database**: PostgreSQL база для уведомлений
+- **RabbitMQ**: Message broker для асинхронного взаимодействия между сервисами
 
 ## 🛠️ Технологический стек
 
@@ -84,14 +104,17 @@ docker-compose ps
 
 ### Доступные endpoints
 
-- **Auth Service Health**: http://localhost:8081/health
+- **Auth Service**: gRPC на порту 50051
 - **Core Service Health**: http://localhost:8080/health
 - **Core Service API**: http://localhost:8080/api/v1/
+- **Notification Service Health**: http://localhost:8082/health
+- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
 
 ### Базы данных
 
 - **Auth Database**: localhost:5433 (auth_user/auth_pass/auth_db)
 - **Core Database**: localhost:5434 (core_user/core_pass/core_db)
+- **Notification Database**: localhost:5435 (notify_user/notify_pass/notify_db)
 
 ## 📁 Структура проекта
 
@@ -101,7 +124,7 @@ docker-compose ps
 │   ├── cmd/               # Точки входа
 │   ├── internal/          # Внутренняя логика
 │   │   ├── models/        # Модели данных auth-service
-│   │   ├── db/            # Подключение к auth БД
+│   │   ├── services/      # Бизнес-логика (включая RabbitMQ)
 │   │   └── ...
 │   ├── migrations/        # SQL миграции для auth БД
 │   └── Dockerfile         # Контейнер auth-service
@@ -109,10 +132,17 @@ docker-compose ps
 │   ├── cmd/               # Точки входа
 │   ├── internal/          # Внутренняя логика
 │   │   ├── models/        # Модели данных core-service
-│   │   ├── db/            # Подключение к core БД
 │   │   └── ...
 │   ├── migrations/        # SQL миграции для core БД
 │   └── Dockerfile         # Контейнер core-service
+├── notification-service/   # Сервис уведомлений
+│   ├── cmd/               # Точки входа
+│   ├── internal/          # Внутренняя логика
+│   │   ├── models/        # Модели данных notification-service
+│   │   ├── services/      # RabbitMQ обработчик событий
+│   │   └── ...
+│   ├── migrations/        # SQL миграции для notification БД
+│   └── Dockerfile         # Контейнер notification-service
 ├── docs/                  # Документация
 ├── docker-compose.yaml    # Оркестрация сервисов
 └── README.md             # Этот файл
@@ -152,10 +182,10 @@ docker-compose up core-migrator
 
 # Откатить миграции
 # Auth service (используйте переменные из .env)
-docker-compose run --rm auth-migrator -path=/migrations -database="postgres://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@auth-db:${AUTH_DB_PORT}/${AUTH_DB_NAME}?sslmode=${AUTH_DB_SSLMODE}" down
+docker-compose run --rm auth-migrator -path=/migrations -database="postgres://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@auth-db:5432/${AUTH_DB_NAME}?sslmode=${AUTH_DB_SSLMODE}" down
 
 # Core service (используйте переменные из .env)
-docker-compose run --rm core-migrator -path=/migrations -database="postgres://${CORE_DB_USER}:${CORE_DB_PASSWORD}@core-db:${CORE_DB_PORT}/${CORE_DB_NAME}?sslmode=${CORE_DB_SSLMODE}" down
+docker-compose run --rm core-migrator -path=/migrations -database="postgres://${CORE_DB_USER}:${CORE_DB_PASSWORD}@core-db:5432/${CORE_DB_NAME}?sslmode=${CORE_DB_SSLMODE}" down
 ```
 
 ## 🧪 Тестирование
