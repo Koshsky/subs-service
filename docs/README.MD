@@ -14,9 +14,6 @@ docker ps
 
 ## Быстрое тестирование
 ```bash
-# Быстрый тест основных функций
-./scripts/quick-test.sh
-
 # Полное тестирование всех endpoint'ов
 ./scripts/test-api.sh
 ```
