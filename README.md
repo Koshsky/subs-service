@@ -152,10 +152,10 @@ docker-compose up core-migrator
 
 # Откатить миграции
 # Auth service (используйте переменные из .env)
-docker-compose run --rm auth-migrator -path=/migrations -database="postgres://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@auth-db:${AUTH_DB_PORT}/${AUTH_DB_NAME}?sslmode=${AUTH_DB_SSLMODE}" down
+docker-compose run --rm auth-migrator -path=/migrations -database="postgres://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@auth-db:5432/${AUTH_DB_NAME}?sslmode=${AUTH_DB_SSLMODE}" down
 
 # Core service (используйте переменные из .env)
-docker-compose run --rm core-migrator -path=/migrations -database="postgres://${CORE_DB_USER}:${CORE_DB_PASSWORD}@core-db:${CORE_DB_PORT}/${CORE_DB_NAME}?sslmode=${CORE_DB_SSLMODE}" down
+docker-compose run --rm core-migrator -path=/migrations -database="postgres://${CORE_DB_USER}:${CORE_DB_PASSWORD}@core-db:5432/${CORE_DB_NAME}?sslmode=${CORE_DB_SSLMODE}" down
 ```
 
 ## 🧪 Тестирование

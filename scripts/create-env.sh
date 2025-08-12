@@ -8,6 +8,10 @@ echo "=========================="
 
 # Create .env file
 cat > .env << 'EOF'
+# Critical Environment Variables - Development Defaults
+# WARNING: Change these values in production!
+# Generated on: $(date)
+
 # Database Configuration
 AUTH_DB_HOST=auth-db
 AUTH_DB_PORT=5432
@@ -30,29 +34,12 @@ NOTIFY_DB_PASSWORD=notify_pass
 NOTIFY_DB_NAME=notify_db
 NOTIFY_DB_SSLMODE=disable
 
-# Service Hosts (service names in Docker network)
-AUTH_SERVICE_HOST=auth-service
-CORE_SERVICE_HOST=core-service
-NOTIFY_SERVICE_HOST=notification-service
-RABBITMQ_HOST=rabbitmq
-
-# Service Ports (single ports for internal and external access)
+# Service Ports
 AUTH_SERVICE_PORT=50051
-AUTH_HEALTH_PORT=8081
 CORE_SERVICE_PORT=8080
 NOTIFY_SERVICE_PORT=8082
 RABBITMQ_PORT=5672
 RABBITMQ_MANAGEMENT_PORT=15672
-
-# Database Ports (internal ports in containers)
-AUTH_DB_PORT=5432
-CORE_DB_PORT=5432
-NOTIFY_DB_PORT=5432
-
-# Database External Ports (external ports for host access)
-AUTH_DB_EXTERNAL_PORT=5433
-CORE_DB_EXTERNAL_PORT=5434
-NOTIFY_DB_EXTERNAL_PORT=5435
 
 # Auth Service Configuration
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
@@ -74,21 +61,7 @@ TLS_KEY_FILE=/app/certs/server-key.pem
 COOKIE_DOMAIN=localhost
 COOKIE_MAX_AGE=3600
 
-# Core Service Timeouts
-CORE_READ_TIMEOUT=10s
-CORE_WRITE_TIMEOUT=15s
-CORE_IDLE_TIMEOUT=60s
-CORE_SHUTDOWN_TIMEOUT=5s
 
-# Core Service Rate Limiting
-CORE_RATE_LIMIT_RPS=10
-CORE_RATE_LIMIT_BURST=20
-
-# Auth Service Timeouts
-AUTH_SHUTDOWN_TIMEOUT=10s
-
-# Notification Service Timeouts
-NOTIFY_SHUTDOWN_TIMEOUT=10s
 EOF
 
 echo "✅ .env file created successfully!"
@@ -106,3 +79,12 @@ cat .env
 echo
 echo "🚀 Now you can start the services:"
 echo "   docker-compose up -d"
+
+echo
+echo "⚠️  IMPORTANT SECURITY NOTES:"
+echo "   1. This .env file contains DEFAULT VALUES for development"
+echo "   2. Change all passwords and secrets in production"
+echo "   3. Use strong JWT secrets (minimum 32 characters)"
+echo "   4. Enable TLS in production environments"
+echo "   5. Never commit .env files to version control"
+echo "   6. Run ./scripts/validate-env.sh to check for issues"

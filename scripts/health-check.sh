@@ -70,7 +70,7 @@ echo
 echo "🌐 Service Health Endpoints:"
 check_service_health "Core Service" "http://localhost:8080" "/health"
 check_service_health "Notification Service" "http://localhost:8082" "/health"
-check_service_health "Auth Service Health" "http://localhost:8081" "/health"
+
 
 echo
 echo "📊 Database Connections:"
@@ -121,12 +121,7 @@ else
     echo "❌ Not listening"
 fi
 
-echo -n "   Auth Service Health (8081): "
-if netstat -tuln 2>/dev/null | grep -q ":8081 "; then
-    echo "✅ Listening"
-else
-    echo "❌ Not listening"
-fi
+
 
 echo -n "   Notification Service (8082): "
 if netstat -tuln 2>/dev/null | grep -q ":8082 "; then
