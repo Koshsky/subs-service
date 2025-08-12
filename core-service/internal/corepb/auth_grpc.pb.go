@@ -28,13 +28,13 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// Сервис аутентификации
+// Authentication service
 type AuthServiceClient interface {
-	// Валидация токена и получение информации о пользователе
+	// Token validation and user information retrieval
 	ValidateToken(ctx context.Context, in *TokenRequest, opts ...grpc.CallOption) (*UserResponse, error)
-	// Регистрация нового пользователя
+	// New user registration
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
-	// Логин пользователя
+	// User login
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 }
 
@@ -80,13 +80,13 @@ func (c *authServiceClient) Login(ctx context.Context, in *LoginRequest, opts ..
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
 //
-// Сервис аутентификации
+// Authentication service
 type AuthServiceServer interface {
-	// Валидация токена и получение информации о пользователе
+	// Token validation and user information retrieval
 	ValidateToken(context.Context, *TokenRequest) (*UserResponse, error)
-	// Регистрация нового пользователя
+	// New user registration
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
-	// Логин пользователя
+	// User login
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
