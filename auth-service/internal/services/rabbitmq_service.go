@@ -7,55 +7,56 @@ import (
 
 	"github.com/Koshsky/subs-service/auth-service/internal/config"
 	"github.com/Koshsky/subs-service/auth-service/internal/models"
-	"github.com/streadway/amqp"
+	"github.com/google/uuid"
+	"github.com/wagslane/go-rabbitmq"
 )
 
 type RabbitMQService struct {
-	conn    *amqp.Connection
-	channel *amqp.Channel
-	config  *config.Config
+	conn      *rabbitmq.Conn
+	publisher *rabbitmq.Publisher
+	config    *config.Config
 }
 
 type UserCreatedEvent struct {
-	UserID string `json:"user_id"`
-	Email  string `json:"email"`
+	UserID uuid.UUID `json:"user_id"`
+	Email  string    `json:"email"`
 }
 
 func NewRabbitMQService(cfg *config.Config) (*RabbitMQService, error) {
-	conn, err := amqp.Dial(cfg.RabbitMQ.URL)
+	// Создаем соединение с автоматическим реконнектом
+	conn, err := rabbitmq.NewConn(
+		cfg.RabbitMQ.URL,
+		rabbitmq.WithConnectionOptionsLogging,
+		rabbitmq.WithConnectionOptionsReconnectInterval(5), // 5 секунд между попытками реконнекта
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RabbitMQ: %v", err)
 	}
 
-	ch, err := conn.Channel()
-	if err != nil {
-		return nil, fmt.Errorf("failed to open channel: %v", err)
-	}
-
-	// Declare exchange
-	err = ch.ExchangeDeclare(
-		cfg.RabbitMQ.Exchange, // name
-		"topic",               // type
-		true,                  // durable
-		false,                 // auto-deleted
-		false,                 // internal
-		false,                 // no-wait
-		nil,                   // arguments
+	// Создаем publisher с автоматическим реконнектом
+	publisher, err := rabbitmq.NewPublisher(
+		conn,
+		rabbitmq.WithPublisherOptionsLogging,
+		rabbitmq.WithPublisherOptionsExchangeName(cfg.RabbitMQ.Exchange),
+		rabbitmq.WithPublisherOptionsExchangeDeclare,
+		rabbitmq.WithPublisherOptionsExchangeKind("topic"),
+		rabbitmq.WithPublisherOptionsExchangeDurable,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to declare exchange: %v", err)
+		conn.Close()
+		return nil, fmt.Errorf("failed to create publisher: %v", err)
 	}
 
 	return &RabbitMQService{
-		conn:    conn,
-		channel: ch,
-		config:  cfg,
+		conn:      conn,
+		publisher: publisher,
+		config:    cfg,
 	}, nil
 }
 
 func (r *RabbitMQService) PublishUserCreated(user *models.User) error {
 	event := UserCreatedEvent{
-		UserID: user.ID.String(),
+		UserID: user.ID,
 		Email:  user.Email,
 	}
 
@@ -64,15 +65,11 @@ func (r *RabbitMQService) PublishUserCreated(user *models.User) error {
 		return fmt.Errorf("failed to marshal user created event: %v", err)
 	}
 
-	err = r.channel.Publish(
-		r.config.RabbitMQ.Exchange, // exchange
-		"user.created",             // routing key
-		false,                      // mandatory
-		false,                      // immediate
-		amqp.Publishing{
-			ContentType: "application/json",
-			Body:        body,
-		},
+	err = r.publisher.Publish(
+		body,
+		[]string{"user.created"},
+		rabbitmq.WithPublishOptionsContentType("application/json"),
+		rabbitmq.WithPublishOptionsExchange(r.config.RabbitMQ.Exchange),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to publish user created event: %v", err)
@@ -83,8 +80,8 @@ func (r *RabbitMQService) PublishUserCreated(user *models.User) error {
 }
 
 func (r *RabbitMQService) Close() {
-	if r.channel != nil {
-		r.channel.Close()
+	if r.publisher != nil {
+		r.publisher.Close()
 	}
 	if r.conn != nil {
 		r.conn.Close()

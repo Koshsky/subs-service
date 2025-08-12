@@ -1,121 +1,92 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/Koshsky/subs-service/notification-service/internal/config"
 	"github.com/Koshsky/subs-service/notification-service/internal/models"
-	"github.com/streadway/amqp"
+	"github.com/wagslane/go-rabbitmq"
 	"gorm.io/gorm"
 )
 
 type RabbitMQService struct {
-	conn     *amqp.Connection
-	channel  *amqp.Channel
+	conn     *rabbitmq.Conn
+	consumer *rabbitmq.Consumer
 	config   *config.Config
 	db       *gorm.DB
-	handlers map[string]func([]byte) error
+	ctx      context.Context
+	cancel   context.CancelFunc
 }
 
 func NewRabbitMQService(cfg *config.Config, db *gorm.DB) (*RabbitMQService, error) {
-	conn, err := amqp.Dial(cfg.RabbitMQ.URL)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Создаем соединение с автоматическим реконнектом
+	conn, err := rabbitmq.NewConn(
+		cfg.RabbitMQ.URL,
+		rabbitmq.WithConnectionOptionsLogging,
+		rabbitmq.WithConnectionOptionsReconnectInterval(5), // 5 секунд между попытками реконнекта
+	)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("failed to connect to RabbitMQ: %v", err)
 	}
 
-	ch, err := conn.Channel()
-	if err != nil {
-		return nil, fmt.Errorf("failed to open channel: %v", err)
-	}
-
-	// Declare exchange
-	err = ch.ExchangeDeclare(
-		cfg.RabbitMQ.Exchange, // name
-		"topic",               // type
-		true,                  // durable
-		false,                 // auto-deleted
-		false,                 // internal
-		false,                 // no-wait
-		nil,                   // arguments
+	// Создаем consumer с автоматическим реконнектом
+	consumer, err := rabbitmq.NewConsumer(
+		conn,
+		cfg.RabbitMQ.Queue,
+		rabbitmq.WithConsumerOptionsRoutingKey("user.created"),
+		rabbitmq.WithConsumerOptionsExchangeName(cfg.RabbitMQ.Exchange),
+		rabbitmq.WithConsumerOptionsExchangeDeclare,
+		rabbitmq.WithConsumerOptionsExchangeKind("topic"),
+		rabbitmq.WithConsumerOptionsExchangeDurable,
+		rabbitmq.WithConsumerOptionsQueueDurable,
+		rabbitmq.WithConsumerOptionsLogging,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to declare exchange: %v", err)
-	}
-
-	// Declare queue
-	q, err := ch.QueueDeclare(
-		cfg.RabbitMQ.Queue, // name
-		true,               // durable
-		false,              // delete when unused
-		false,              // exclusive
-		false,              // no-wait
-		nil,                // arguments
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to declare queue: %v", err)
-	}
-
-	// Bind queue to exchange
-	err = ch.QueueBind(
-		q.Name,                // queue name
-		"user.created",        // routing key
-		cfg.RabbitMQ.Exchange, // exchange
-		false,
-		nil,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to bind queue: %v", err)
+		conn.Close()
+		cancel()
+		return nil, fmt.Errorf("failed to create consumer: %v", err)
 	}
 
 	service := &RabbitMQService{
 		conn:     conn,
-		channel:  ch,
+		consumer: consumer,
 		config:   cfg,
 		db:       db,
-		handlers: make(map[string]func([]byte) error),
-	}
-
-	service.handlers["user.created"] = func(data []byte) error {
-		return service.handleUserCreated(data)
+		ctx:      ctx,
+		cancel:   cancel,
 	}
 
 	return service, nil
 }
 
 func (r *RabbitMQService) StartConsuming() error {
-	msgs, err := r.channel.Consume(
-		r.config.RabbitMQ.Queue, // queue
-		"",                      // consumer
-		false,                   // auto-ack
-		false,                   // exclusive
-		false,                   // no-local
-		false,                   // no-wait
-		nil,                     // args
-	)
-	if err != nil {
-		return fmt.Errorf("failed to register consumer: %v", err)
-	}
-
 	log.Printf("Started consuming messages from queue: %s", r.config.RabbitMQ.Queue)
 
-	go func() {
-		for d := range msgs {
-			routingKey := d.RoutingKey
-			if handler, exists := r.handlers[routingKey]; exists {
-				if err := handler(d.Body); err != nil {
-					log.Printf("Error handling message: %v", err)
-					d.Nack(false, true) // requeue
-				} else {
-					d.Ack(false)
-				}
-			} else {
-				log.Printf("No handler found for routing key: %s", routingKey)
-				d.Nack(false, false) // don't requeue
-			}
+	err := r.consumer.Run(func(d rabbitmq.Delivery) rabbitmq.Action {
+		// Проверяем контекст для graceful shutdown
+		select {
+		case <-r.ctx.Done():
+			return rabbitmq.NackDiscard
+		default:
 		}
-	}()
+
+		if err := r.handleUserCreated(d.Body); err != nil {
+			log.Printf("Error handling message: %v", err)
+			return rabbitmq.NackRequeue
+		}
+
+		return rabbitmq.Ack
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to start consumer: %v", err)
+	}
 
 	return nil
 }
@@ -149,9 +120,15 @@ func (r *RabbitMQService) handleUserCreated(data []byte) error {
 }
 
 func (r *RabbitMQService) Close() {
-	if r.channel != nil {
-		r.channel.Close()
+	// Отменяем контекст для graceful shutdown
+	if r.cancel != nil {
+		r.cancel()
 	}
+
+	if r.consumer != nil {
+		r.consumer.Close()
+	}
+
 	if r.conn != nil {
 		r.conn.Close()
 	}
