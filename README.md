@@ -88,7 +88,7 @@ cd subs-service
 
 2. **Настройка переменных окружения**
 ```bash
-cp .env.example .env
+sh generate-env.sh
 # Отредактируйте .env файл под ваши нужды
 ```
 
