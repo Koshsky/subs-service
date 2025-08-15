@@ -25,7 +25,6 @@ type SubscriptionService interface {
 	GetUserSubscriptions(userID uuid.UUID) ([]models.Subscription, error)
 	UpdateByID(id int, update models.Subscription) (models.Subscription, error)
 	DeleteByID(id int) error
-	SumPrice(params models.SubscriptionFilter) (int, error)
 }
 
 type SubscriptionController struct{ SubService SubscriptionService }
@@ -246,47 +245,4 @@ func (c *SubscriptionController) Delete(ctx *gin.Context) {
 	}
 	ctx.Set("db_affected_id", id)
 	ctx.JSON(http.StatusOK, gin.H{"message": "Deleted successfully"})
-}
-
-// SumPrice sums the price of subscriptions for a user
-func (c *SubscriptionController) SumPrice(ctx *gin.Context) {
-	var req models.SubscriptionFilter
-
-	userID, err := getUserIDFromContext(ctx)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid user ID",
-			"details": err.Error(),
-		})
-		return
-	}
-	req.UserID = userID
-	req.Service = ctx.Query("service")
-
-	err = req.StartMonth.UnmarshalJSON([]byte(ctx.Query("start_month")))
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid start month format",
-			"details": err.Error(),
-		})
-		return
-	}
-	err = req.EndMonth.UnmarshalJSON([]byte(ctx.Query("end_month")))
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid end month format",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	sum, err := c.SubService.SumPrice(req)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "failed to calculate total price",
-			"details": err.Error(),
-		})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"total_price": sum})
 }

@@ -12,26 +12,6 @@ func NewSubscriptionRepository(db *gorm.DB) *SubscriptionRepository {
 	return &SubscriptionRepository{DB: db}
 }
 
-// GetBySubscriptionFilter gets subscriptions by subscription filter
-func (sr *SubscriptionRepository) GetBySubscriptionFilter(params models.SubscriptionFilter) ([]models.Subscription, error) {
-	var subs []models.Subscription
-
-	query := sr.DB.Model(&models.Subscription{}).
-		Where("start_date BETWEEN ? AND ?",
-			params.StartMonth.Time(),
-			params.EndMonth.Time().AddDate(0, 1, -1)) // Until end of month
-
-	if params.UserID != uuid.Nil {
-		query = query.Where("user_id = ?", params.UserID)
-	}
-	if params.Service != "" {
-		query = query.Where("service_name = ?", params.Service)
-	}
-
-	err := query.Find(&subs).Error
-	return subs, err
-}
-
 // GetUserSubscriptions gets user subscriptions
 func (sr *SubscriptionRepository) GetUserSubscriptions(userID uuid.UUID) ([]models.Subscription, error) {
 	var subs []models.Subscription
