@@ -3,92 +3,309 @@ package models
 import (
 	"testing"
 
-	"github.com/go-playground/validator/v10"
+	"github.com/Koshsky/subs-service/auth-service/internal/utils"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestUserValidation(t *testing.T) {
-	validate := validator.New()
+// TestData contains test data for reuse
+type TestData struct {
+	validEmail    string
+	validPassword string
+}
 
-	tests := []struct {
-		name    string
-		user    User
-		isValid bool
+var testData = TestData{
+	validEmail:    "test@example.com",
+	validPassword: "Password123!",
+}
+
+// TestEmailValidation tests email validation
+func TestEmailValidation(t *testing.T) {
+	validate := utils.NewValidator()
+
+	testCases := []struct {
+		name        string
+		email       string
+		expectValid bool
+		description string
 	}{
 		{
-			name: "Valid user",
-			user: User{
-				Email:    "test@example.com",
-				Password: "password123",
-			},
-			isValid: true,
+			name:        "valid_email",
+			email:       "test@example.com",
+			expectValid: true,
+			description: "Standard email format",
 		},
 		{
-			name: "Invalid email format - missing @",
-			user: User{
-				Email:    "invalid-email",
-				Password: "password123",
-			},
-			isValid: false,
+			name:        "email_with_subdomain",
+			email:       "test@sub.example.com",
+			expectValid: true,
+			description: "Email with subdomain",
 		},
 		{
-			name: "Invalid email format - missing domain",
-			user: User{
-				Email:    "test@",
-				Password: "password123",
-			},
-			isValid: false,
+			name:        "email_with_numbers",
+			email:       "test123@example.com",
+			expectValid: true,
+			description: "Email with numbers in local part",
 		},
 		{
-			name: "Invalid email format - missing local part",
-			user: User{
-				Email:    "@example.com",
-				Password: "password123",
-			},
-			isValid: false,
+			name:        "email_with_dots",
+			email:       "test.name@example.com",
+			expectValid: true,
+			description: "Email with dots in local part",
 		},
 		{
-			name: "Invalid email format - spaces",
-			user: User{
-				Email:    "test @example.com",
-				Password: "password123",
-			},
-			isValid: false,
+			name:        "missing_at_symbol",
+			email:       "invalid-email",
+			expectValid: false,
+			description: "Email without @ symbol",
 		},
 		{
-			name: "Empty email",
-			user: User{
-				Email:    "",
-				Password: "password123",
-			},
-			isValid: false,
+			name:        "missing_domain",
+			email:       "test@",
+			expectValid: false,
+			description: "Email without domain",
 		},
 		{
-			name: "Empty password",
-			user: User{
-				Email:    "test@example.com",
-				Password: "",
-			},
-			isValid: false,
+			name:        "missing_local_part",
+			email:       "@example.com",
+			expectValid: false,
+			description: "Email without local part",
 		},
 		{
-			name: "Password too short",
-			user: User{
-				Email:    "test@example.com",
-				Password: "123",
-			},
-			isValid: false,
+			name:        "contains_spaces",
+			email:       "test @example.com",
+			expectValid: false,
+			description: "Email with spaces",
+		},
+		{
+			name:        "empty_email",
+			email:       "",
+			expectValid: false,
+			description: "Empty email string",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validate.Struct(tt.user)
-			if tt.isValid {
-				assert.NoError(t, err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			user := createTestUser(tc.email, testData.validPassword)
+
+			// Act
+			err := validate.Struct(user)
+
+			// Assert
+			if tc.expectValid {
+				assert.NoError(t, err, "Expected valid email: %s", tc.description)
 			} else {
-				assert.Error(t, err)
+				assert.Error(t, err, "Expected invalid email: %s", tc.description)
 			}
 		})
+	}
+}
+
+// TestPasswordValidation tests password validation
+func TestPasswordValidation(t *testing.T) {
+	validate := utils.NewValidator()
+
+	testCases := []struct {
+		name        string
+		password    string
+		expectValid bool
+		description string
+	}{
+		// Valid passwords
+		{
+			name:        "valid_password",
+			password:    "Password123!",
+			expectValid: true,
+			description: "Password meets all requirements",
+		},
+		{
+			name:        "password_with_at_symbol",
+			password:    "MyPass@word1",
+			expectValid: true,
+			description: "Password with @ symbol",
+		},
+		{
+			name:        "password_with_underscore",
+			password:    "My_Pass123",
+			expectValid: true,
+			description: "Password with underscore",
+		},
+		{
+			name:        "password_with_dash",
+			password:    "My-Pass123",
+			expectValid: true,
+			description: "Password with dash",
+		},
+		{
+			name:        "password_with_hash",
+			password:    "My#Pass123",
+			expectValid: true,
+			description: "Password with hash symbol",
+		},
+		// Invalid passwords
+		{
+			name:        "empty_password",
+			password:    "",
+			expectValid: false,
+			description: "Empty password",
+		},
+		{
+			name:        "too_short_password",
+			password:    "123",
+			expectValid: false,
+			description: "Password too short (less than 10 characters)",
+		},
+		{
+			name:        "exactly_9_characters",
+			password:    "Pass123!@",
+			expectValid: false,
+			description: "Password exactly 9 characters",
+		},
+		{
+			name:        "missing_uppercase",
+			password:    "password123!",
+			expectValid: false,
+			description: "Password missing uppercase letters",
+		},
+		{
+			name:        "missing_lowercase",
+			password:    "PASSWORD123!",
+			expectValid: false,
+			description: "Password missing lowercase letters",
+		},
+		{
+			name:        "missing_special_character",
+			password:    "Password123",
+			expectValid: false,
+			description: "Password missing special characters",
+		},
+		{
+			name:        "only_uppercase_and_special",
+			password:    "PASSWORD123!",
+			expectValid: false,
+			description: "Password with only uppercase and special characters",
+		},
+		{
+			name:        "only_lowercase_and_special",
+			password:    "password123!",
+			expectValid: false,
+			description: "Password with only lowercase and special characters",
+		},
+		{
+			name:        "only_numbers",
+			password:    "1234567890",
+			expectValid: false,
+			description: "Password with only numbers",
+		},
+		{
+			name:        "only_lowercase",
+			password:    "abcdefghijklmnopqrstuvwxyz",
+			expectValid: false,
+			description: "Password with only lowercase letters",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			user := createTestUser(testData.validEmail, tc.password)
+
+			// Act
+			err := validate.Struct(user)
+
+			// Assert
+			if tc.expectValid {
+				assert.NoError(t, err, "Expected valid password: %s", tc.description)
+			} else {
+				assert.Error(t, err, "Expected invalid password: %s", tc.description)
+			}
+		})
+	}
+}
+
+// TestUserBeforeCreate tests the BeforeCreate method
+func TestUserBeforeCreate(t *testing.T) {
+	t.Run("should_generate_uuid_when_id_is_nil", func(t *testing.T) {
+		// Arrange
+		user := createTestUser(testData.validEmail, testData.validPassword)
+		require.Equal(t, uuid.Nil, user.ID, "User ID should be nil initially")
+
+		// Act
+		err := user.BeforeCreate(nil)
+
+		// Assert
+		assert.NoError(t, err, "BeforeCreate should not return error")
+		assert.NotEqual(t, uuid.Nil, user.ID, "User ID should be generated")
+		assert.NotEmpty(t, user.ID, "User ID should not be empty")
+	})
+
+	t.Run("should_preserve_existing_uuid", func(t *testing.T) {
+		// Arrange
+		existingID := uuid.New()
+		user := &User{
+			ID:       existingID,
+			Email:    testData.validEmail,
+			Password: testData.validPassword,
+		}
+
+		// Act
+		err := user.BeforeCreate(nil)
+
+		// Assert
+		assert.NoError(t, err, "BeforeCreate should not return error")
+		assert.Equal(t, existingID, user.ID, "Existing ID should remain unchanged")
+	})
+}
+
+// TestUserModelIntegration tests the integration of all model components
+func TestUserModelIntegration(t *testing.T) {
+	t.Run("complete_valid_user", func(t *testing.T) {
+		// Arrange
+		validate := utils.NewValidator()
+		user := createTestUser(testData.validEmail, testData.validPassword)
+
+		// Act
+		validationErr := validate.Struct(user)
+		beforeCreateErr := user.BeforeCreate(nil)
+
+		// Assert
+		assert.NoError(t, validationErr, "Valid user should pass validation")
+		assert.NoError(t, beforeCreateErr, "BeforeCreate should succeed")
+		assert.NotEqual(t, uuid.Nil, user.ID, "User should have generated ID")
+	})
+}
+
+// Helper functions
+
+// createTestUser creates a test user with the given email and password
+func createTestUser(email, password string) *User {
+	return &User{
+		Email:    email,
+		Password: password,
+	}
+}
+
+// Benchmark tests
+
+func BenchmarkPasswordValidation(b *testing.B) {
+	validate := utils.NewValidator()
+	user := createTestUser(testData.validEmail, testData.validPassword)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = validate.Struct(user)
+	}
+}
+
+func BenchmarkEmailValidation(b *testing.B) {
+	validate := utils.NewValidator()
+	user := createTestUser(testData.validEmail, testData.validPassword)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = validate.Struct(user)
 	}
 }

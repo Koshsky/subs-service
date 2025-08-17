@@ -7,6 +7,7 @@ import (
 
 	"github.com/Koshsky/subs-service/auth-service/internal/models"
 	"github.com/Koshsky/subs-service/auth-service/internal/repositories"
+	"github.com/Koshsky/subs-service/auth-service/internal/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -23,7 +24,7 @@ func NewAuthService(repo *repositories.UserRepository, rabbitmqService *RabbitMQ
 		UserRepo:        repo,
 		RabbitMQService: rabbitmqService,
 		JWTSecret:       jwtSecret,
-		Validator:       validator.New(),
+		Validator:       utils.NewValidator(),
 	}
 }
 
