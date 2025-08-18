@@ -7,46 +7,43 @@ import (
 	"github.com/Koshsky/subs-service/auth-service/internal/models"
 	"github.com/Koshsky/subs-service/auth-service/internal/repositories"
 	"github.com/Koshsky/subs-service/auth-service/internal/repositories/mocks"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type UserRepositoryTestSuite struct {
 	suite.Suite
-	mockDB *mocks.DatabaseInterface
-	repo   *repositories.UserRepository
+	mockDB   *mocks.IDatabase
+	userRepo *repositories.UserRepository
 }
 
 func (suite *UserRepositoryTestSuite) SetupTest() {
-	suite.mockDB = new(mocks.DatabaseInterface)
-	suite.repo = &repositories.UserRepository{DB: suite.mockDB}
+	suite.mockDB = new(mocks.IDatabase)
+	suite.userRepo = &repositories.UserRepository{DB: suite.mockDB}
 }
 
 func (suite *UserRepositoryTestSuite) TearDownTest() {
 	suite.mockDB.AssertExpectations(suite.T())
 }
 
-func (suite *UserRepositoryTestSuite) TestNewUserRepository() {
-	// Arrange & Act
-	repo := repositories.NewUserRepository(nil)
+// ===== CONSTRUCTOR TESTS =====
+
+func (suite *UserRepositoryTestSuite) TestNewUserRepository_Success() {
+	// Arrange
+	mockDB := new(mocks.IDatabase)
+
+	// Act
+	repo := repositories.NewUserRepository(mockDB)
 
 	// Assert
-	suite.NotNil(repo)
-	suite.NotNil(repo.DB)
+	suite.Require().NotNil(repo)
+	suite.Equal(mockDB, repo.DB)
 }
 
-func (suite *UserRepositoryTestSuite) TestCreateUser_NilUser() {
-	// Arrange
-	var user *models.User = nil
+// ===== CREATE USER TESTS =====
 
-	// Act & Assert - should panic
-	suite.Panics(func() {
-		suite.repo.CreateUser(user)
-	})
-}
-
-// CreateUser Tests
 func (suite *UserRepositoryTestSuite) TestCreateUser_Success() {
 	// Arrange
 	user := &models.User{
@@ -54,21 +51,53 @@ func (suite *UserRepositoryTestSuite) TestCreateUser_Success() {
 		Password: "password123",
 	}
 
-	suite.mockDB.On("Create", mock.AnythingOfType("*models.User")).Return(suite.mockDB)
+	suite.mockDB.On("Create", user).Return(suite.mockDB)
 	suite.mockDB.On("GetError").Return(nil)
 
 	// Act
-	err := suite.repo.CreateUser(user)
+	err := suite.userRepo.CreateUser(user)
 
 	// Assert
 	suite.Require().NoError(err)
-	suite.Require().NotNil(user)
-	suite.NotEqual("password123", user.Password) // Password should be hashed
-	suite.NotEmpty(user.Password)
+	suite.Require().NotEqual(uuid.Nil, user.ID)
+	suite.mockDB.AssertExpectations(suite.T())
+}
 
-	// Verify that bcrypt hash is valid
-	bcryptErr := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte("password123"))
-	suite.Require().NoError(bcryptErr)
+func (suite *UserRepositoryTestSuite) TestCreateUser_NilDatabase() {
+	// Arrange
+	repo := &repositories.UserRepository{DB: nil}
+	user := &models.User{
+		Email:    "test@example.com",
+		Password: "password123",
+	}
+
+	// Act
+	err := repo.CreateUser(user)
+
+	// Assert
+	suite.Require().Error(err)
+	suite.Contains(err.Error(), "database connection is not initialized")
+}
+
+func (suite *UserRepositoryTestSuite) TestCreateUser_WithExistingUUID() {
+	// Arrange
+	existingUUID := uuid.New()
+	user := &models.User{
+		ID:       existingUUID,
+		Email:    "test@example.com",
+		Password: "password123",
+	}
+
+	suite.mockDB.On("Create", user).Return(suite.mockDB)
+	suite.mockDB.On("GetError").Return(nil)
+
+	// Act
+	err := suite.userRepo.CreateUser(user)
+
+	// Assert
+	suite.Require().NoError(err)
+	suite.Equal(existingUUID, user.ID) // UUID should not change
+	suite.mockDB.AssertExpectations(suite.T())
 }
 
 func (suite *UserRepositoryTestSuite) TestCreateUser_DatabaseError() {
@@ -77,137 +106,74 @@ func (suite *UserRepositoryTestSuite) TestCreateUser_DatabaseError() {
 		Email:    "test@example.com",
 		Password: "password123",
 	}
-	dbError := errors.New("database error")
+	expectedError := errors.New("database error")
 
-	suite.mockDB.On("Create", mock.AnythingOfType("*models.User")).Return(suite.mockDB)
-	suite.mockDB.On("GetError").Return(dbError)
+	suite.mockDB.On("Create", user).Return(suite.mockDB)
+	suite.mockDB.On("GetError").Return(expectedError)
 
 	// Act
-	err := suite.repo.CreateUser(user)
+	err := suite.userRepo.CreateUser(user)
 
 	// Assert
 	suite.Require().Error(err)
-	suite.Require().NotNil(user)
-	suite.Contains(err.Error(), "cannot create user")
-	suite.ErrorAs(err, &dbError)
-
-	// Verify that password was hashed before DB call
-	suite.NotEqual("password123", user.Password)
-	suite.NotEmpty(user.Password)
-
-	// Verify that bcrypt hash is valid
-	bcryptErr := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte("password123"))
-	suite.Require().NoError(bcryptErr)
+	suite.Contains(err.Error(), "database error")
+	suite.mockDB.AssertExpectations(suite.T())
 }
 
-func (suite *UserRepositoryTestSuite) TestCreateUser_BcryptError() {
-	// Arrange
-	user := &models.User{
-		Email:    "test@example.com",
-		Password: string(make([]byte, 73)), // 73 bytes > bcrypt limit
-	}
+// ===== GET USER BY EMAIL TESTS =====
 
-	// Act
-	err := suite.repo.CreateUser(user)
-
-	// Assert
-	suite.Error(err)
-	suite.Contains(err.Error(), "bcrypt")
-}
-
-// GetUserByEmail Tests
 func (suite *UserRepositoryTestSuite) TestGetUserByEmail_Success() {
 	// Arrange
-	expectedEmail := "test@example.com"
-
-	suite.mockDB.On("Where", "email = ?", expectedEmail).Return(suite.mockDB)
-	suite.mockDB.On("First", mock.AnythingOfType("*models.User")).Return(suite.mockDB)
-	suite.mockDB.On("GetError").Return(nil)
-
-	// Act
-	user, err := suite.repo.GetUserByEmail(expectedEmail)
-
-	// Assert
-	suite.Require().NoError(err)
-	suite.Require().NotNil(user)
-}
-
-func (suite *UserRepositoryTestSuite) TestGetUserByEmail_NotFound() {
-	// Arrange
-	dbError := errors.New("record not found")
-
-	suite.mockDB.On("Where", "email = ?", "nonexistent@example.com").Return(suite.mockDB)
-	suite.mockDB.On("First", mock.AnythingOfType("*models.User")).Return(suite.mockDB)
-	suite.mockDB.On("GetError").Return(dbError)
-
-	// Act
-	user, err := suite.repo.GetUserByEmail("nonexistent@example.com")
-
-	// Assert
-	suite.Error(err)
-	suite.Nil(user)
-	suite.ErrorAs(err, &dbError)
-}
-
-// ValidateUser Tests
-func (suite *UserRepositoryTestSuite) TestValidateUser_Success() {
-	// Arrange
 	email := "test@example.com"
-	password := "correctpassword"
 
 	suite.mockDB.On("Where", "email = ?", email).Return(suite.mockDB)
 	suite.mockDB.On("First", mock.AnythingOfType("*models.User")).Run(func(args mock.Arguments) {
 		user := args.Get(0).(*models.User)
+		user.ID = uuid.New()
 		user.Email = email
-		// Generate correct hash for the password
-		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		user.Password = string(hashedPassword)
+		user.Password = "hashed_password"
 	}).Return(suite.mockDB)
 	suite.mockDB.On("GetError").Return(nil)
 
 	// Act
-	user, err := suite.repo.ValidateUser(email, password)
+	result, err := suite.userRepo.GetUserByEmail(email)
 
 	// Assert
 	suite.Require().NoError(err)
-	suite.Require().NotNil(user)
-	suite.Equal(email, user.Email)
+	suite.Require().NotNil(result)
+	suite.Equal(email, result.Email)
+	suite.mockDB.AssertExpectations(suite.T())
 }
 
-func (suite *UserRepositoryTestSuite) TestValidateUser_UserNotFound() {
+func (suite *UserRepositoryTestSuite) TestGetUserByEmail_NilDatabase() {
 	// Arrange
-	suite.mockDB.On("Where", "email = ?", "nonexistent@example.com").Return(suite.mockDB)
+	repo := &repositories.UserRepository{DB: nil}
+
+	// Act
+	user, err := repo.GetUserByEmail("test@example.com")
+
+	// Assert
+	suite.Require().Error(err)
+	suite.Require().Nil(user)
+	suite.Contains(err.Error(), "database connection is not initialized")
+}
+
+func (suite *UserRepositoryTestSuite) TestGetUserByEmail_UserNotFound() {
+	// Arrange
+	email := "test@example.com"
+
+	suite.mockDB.On("Where", "email = ?", email).Return(suite.mockDB)
 	suite.mockDB.On("First", mock.AnythingOfType("*models.User")).Return(suite.mockDB)
-	suite.mockDB.On("GetError").Return(errors.New("record not found"))
+	suite.mockDB.On("GetError").Return(gorm.ErrRecordNotFound)
 
 	// Act
-	user, err := suite.repo.ValidateUser("nonexistent@example.com", "password123")
+	user, err := suite.userRepo.GetUserByEmail(email)
 
 	// Assert
-	suite.Error(err)
-	suite.Nil(user)
+	suite.Require().Error(err)
+	suite.Require().Nil(user)
 	suite.Contains(err.Error(), "cannot get user by email")
-	suite.Contains(err.Error(), "record not found")
-}
-
-func (suite *UserRepositoryTestSuite) TestValidateUser_InvalidPassword() {
-	// Arrange
-	suite.mockDB.On("Where", "email = ?", "test@example.com").Return(suite.mockDB)
-	suite.mockDB.On("First", mock.AnythingOfType("*models.User")).Run(func(args mock.Arguments) {
-		user := args.Get(0).(*models.User)
-		user.Email = "test@example.com"
-		user.Password = "correctpassword"
-	}).Return(suite.mockDB)
-	suite.mockDB.On("GetError").Return(nil)
-
-	// Act
-	user, err := suite.repo.ValidateUser("test@example.com", "wrongpassword")
-
-	// Assert
-	suite.Error(err)
-	suite.Nil(user)
-	suite.Contains(err.Error(), "authentication failed")
-	suite.Contains(err.Error(), "bcrypt")
+	suite.mockDB.AssertExpectations(suite.T())
 }
 
 // Run tests

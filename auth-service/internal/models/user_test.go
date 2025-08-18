@@ -6,7 +6,6 @@ import (
 	"github.com/Koshsky/subs-service/auth-service/internal/utils"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestData contains test data for reuse
@@ -226,40 +225,6 @@ func TestPasswordValidation(t *testing.T) {
 	}
 }
 
-// TestUserBeforeCreate tests the BeforeCreate method
-func TestUserBeforeCreate(t *testing.T) {
-	t.Run("should_generate_uuid_when_id_is_nil", func(t *testing.T) {
-		// Arrange
-		user := createTestUser(testData.validEmail, testData.validPassword)
-		require.Equal(t, uuid.Nil, user.ID, "User ID should be nil initially")
-
-		// Act
-		err := user.BeforeCreate(nil)
-
-		// Assert
-		assert.NoError(t, err, "BeforeCreate should not return error")
-		assert.NotEqual(t, uuid.Nil, user.ID, "User ID should be generated")
-		assert.NotEmpty(t, user.ID, "User ID should not be empty")
-	})
-
-	t.Run("should_preserve_existing_uuid", func(t *testing.T) {
-		// Arrange
-		existingID := uuid.New()
-		user := &User{
-			ID:       existingID,
-			Email:    testData.validEmail,
-			Password: testData.validPassword,
-		}
-
-		// Act
-		err := user.BeforeCreate(nil)
-
-		// Assert
-		assert.NoError(t, err, "BeforeCreate should not return error")
-		assert.Equal(t, existingID, user.ID, "Existing ID should remain unchanged")
-	})
-}
-
 // TestUserModelIntegration tests the integration of all model components
 func TestUserModelIntegration(t *testing.T) {
 	t.Run("complete_valid_user", func(t *testing.T) {
@@ -269,12 +234,10 @@ func TestUserModelIntegration(t *testing.T) {
 
 		// Act
 		validationErr := validate.Struct(user)
-		beforeCreateErr := user.BeforeCreate(nil)
 
 		// Assert
 		assert.NoError(t, validationErr, "Valid user should pass validation")
-		assert.NoError(t, beforeCreateErr, "BeforeCreate should succeed")
-		assert.NotEqual(t, uuid.Nil, user.ID, "User should have generated ID")
+		assert.Equal(t, uuid.Nil, user.ID, "User ID should be nil initially (UUID generation moved to repository)")
 	})
 }
 

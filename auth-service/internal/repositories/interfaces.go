@@ -2,21 +2,20 @@ package repositories
 
 import "github.com/Koshsky/subs-service/auth-service/internal/models"
 
-//go:generate mockery --name=UserRepositoryInterface --output=./mocks --outpkg=mocks --filename=UserRepositoryInterface.go
-type UserRepositoryInterface interface {
+//go:generate mockery --name=IUserRepository --output=./mocks --outpkg=mocks --filename=IUserRepository.go
+type IUserRepository interface {
 	CreateUser(user *models.User) error
 	GetUserByEmail(email string) (*models.User, error)
-	ValidateUser(email, password string) (*models.User, error)
 }
 
-//go:generate mockery --name=DatabaseInterface --output=./mocks --outpkg=mocks --filename=DatabaseInterface.go
-type DatabaseInterface interface {
-	Create(value interface{}) DatabaseInterface
-	Where(query interface{}, args ...interface{}) DatabaseInterface
-	First(dest interface{}, conds ...interface{}) DatabaseInterface
+//go:generate mockery --name=IDatabase --output=./mocks --outpkg=mocks --filename=IDatabase.go
+type IDatabase interface {
+	Create(value interface{}) IDatabase
+	Where(query interface{}, args ...interface{}) IDatabase
+	First(dest interface{}, conds ...interface{}) IDatabase
 	GetError() error
 }
 
 // Interface compliance checks - will fail at compile time if interfaces are not implemented
-var _ UserRepositoryInterface = (*UserRepository)(nil)
-var _ DatabaseInterface = (*GormAdapter)(nil)
+var _ IUserRepository = (*UserRepository)(nil)
+var _ IDatabase = (*GormAdapter)(nil)

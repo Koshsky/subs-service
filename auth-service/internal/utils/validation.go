@@ -11,7 +11,7 @@ func ValidatePassword(fl validator.FieldLevel) bool {
 	password := fl.Field().String()
 
 	// Check minimum length
-	if len(password) < 10 {
+	if len(password) < 10 || len(password) > 72 {
 		return false
 	}
 
@@ -21,6 +21,8 @@ func ValidatePassword(fl validator.FieldLevel) bool {
 	hasUpper := false
 	// Check for special characters
 	hasSpecial := false
+	// check for numbers
+	hasNumber := false
 
 	for _, char := range password {
 		if unicode.IsLower(char) {
@@ -32,9 +34,12 @@ func ValidatePassword(fl validator.FieldLevel) bool {
 		if !unicode.IsLetter(char) && !unicode.IsNumber(char) {
 			hasSpecial = true
 		}
+		if unicode.IsNumber(char) {
+			hasNumber = true
+		}
 	}
 
-	return hasLower && hasUpper && hasSpecial
+	return hasLower && hasUpper && hasSpecial && hasNumber
 }
 
 // RegisterCustomValidations registers custom validations

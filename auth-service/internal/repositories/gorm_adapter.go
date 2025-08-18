@@ -12,25 +12,25 @@ type GormAdapter struct {
 }
 
 // NewGormAdapter creates a new adapter for GORM
-func NewGormAdapter(db *gorm.DB) DatabaseInterface {
+func NewGormAdapter(db *gorm.DB) IDatabase {
 	return &GormAdapter{db: db}
 }
 
-func (g *GormAdapter) Create(value interface{}) DatabaseInterface {
+func (g *GormAdapter) Create(value interface{}) IDatabase {
 	if g.db == nil {
 		return &GormAdapter{db: nil}
 	}
 	return &GormAdapter{db: g.db.Create(value)}
 }
 
-func (g *GormAdapter) Where(query interface{}, args ...interface{}) DatabaseInterface {
+func (g *GormAdapter) Where(query interface{}, args ...interface{}) IDatabase {
 	if g.db == nil {
 		return &GormAdapter{db: nil}
 	}
 	return &GormAdapter{db: g.db.Where(query, args...)}
 }
 
-func (g *GormAdapter) First(dest interface{}, conds ...interface{}) DatabaseInterface {
+func (g *GormAdapter) First(dest interface{}, conds ...interface{}) IDatabase {
 	if g.db == nil {
 		return &GormAdapter{db: nil}
 	}
