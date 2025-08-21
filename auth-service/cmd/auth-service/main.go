@@ -17,21 +17,6 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
-	database, err := cfg.ConnectDB()
-	if err != nil {
-		log.Fatalf("Failed to connect to auth database: %v", err)
-	}
-
-	sqlDB, err := database.DB()
-	if err != nil {
-		log.Fatalf("Failed to get auth database handle: %v", err)
-	}
-	defer func() {
-		if cerr := sqlDB.Close(); cerr != nil {
-			log.Printf("Error closing auth database: %v", cerr)
-		}
-	}()
-
 	// Initialize RabbitMQ service
 	rabbitmqService, err := messaging.NewRabbitMQAdapter(cfg)
 	if err != nil {
@@ -42,7 +27,11 @@ func main() {
 		defer rabbitmqService.Close()
 	}
 
-	userRepo := repositories.NewUserRepository(repositories.NewGormAdapter(database))
+	gormAdapter, err := repositories.NewGormAdapter(cfg.Database)
+	if err != nil {
+		log.Fatalf("Failed to create database adapter: %v", err)
+	}
+	userRepo := repositories.NewUserRepository(gormAdapter)
 	authService := services.NewAuthService(userRepo, rabbitmqService, cfg)
 	authServer := server.NewAuthServer(authService)
 

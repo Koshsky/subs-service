@@ -2,7 +2,10 @@ package repositories
 
 import (
 	"errors"
+	"fmt"
 
+	"github.com/Koshsky/subs-service/auth-service/internal/config"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -11,8 +14,21 @@ type GormAdapter struct {
 	db *gorm.DB
 }
 
-// NewGormAdapter creates a new adapter for GORM
-func NewGormAdapter(db *gorm.DB) IDatabase {
+// NewGormAdapter creates a new adapter for GORM with config
+func NewGormAdapter(dbConfig config.DBConfig) (IDatabase, error) {
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.DBName, dbConfig.SSLMode)
+
+	db, err := gorm.Open(postgres.Open(connStr), &gorm.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	return &GormAdapter{db: db}, nil
+}
+
+// NewGormAdapterFromDB creates a new adapter from existing GORM DB (for testing)
+func NewGormAdapterFromDB(db *gorm.DB) IDatabase {
 	return &GormAdapter{db: db}
 }
 

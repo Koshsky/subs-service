@@ -3,6 +3,7 @@ package repositories_test
 import (
 	"testing"
 
+	"github.com/Koshsky/subs-service/auth-service/internal/config"
 	"github.com/Koshsky/subs-service/auth-service/internal/repositories"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/driver/sqlite"
@@ -24,7 +25,7 @@ func (suite *GormAdapterTestSuite) setupTestDB() (*gorm.DB, repositories.IDataba
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	suite.Require().NoError(err)
 
-	adapter := repositories.NewGormAdapter(db)
+	adapter := repositories.NewGormAdapterFromDB(db)
 
 	err = db.AutoMigrate(&TestUser{})
 	suite.Require().NoError(err)
@@ -36,7 +37,7 @@ func (suite *GormAdapterTestSuite) setupTestDB() (*gorm.DB, repositories.IDataba
 
 func (suite *GormAdapterTestSuite) TestNewGormAdapter_NilDB() {
 	// Arrange & Act
-	adapter := repositories.NewGormAdapter(nil)
+	adapter := repositories.NewGormAdapterFromDB(nil)
 
 	// Assert
 	suite.Require().NotNil(adapter)
@@ -49,11 +50,30 @@ func (suite *GormAdapterTestSuite) TestNewGormAdapter_Success() {
 	suite.Require().NoError(err)
 
 	// Act
-	adapter := repositories.NewGormAdapter(db)
+	adapter := repositories.NewGormAdapterFromDB(db)
 
 	// Assert
 	suite.Require().NotNil(adapter)
 	suite.Require().IsType(&repositories.GormAdapter{}, adapter)
+}
+
+func (suite *GormAdapterTestSuite) TestNewGormAdapterWithConfig_Success() {
+	// Arrange
+	dbConfig := config.DBConfig{
+		Host:     "localhost",
+		Port:     "5432",
+		User:     "test",
+		Password: "test",
+		DBName:   "test",
+		SSLMode:  "disable",
+	}
+
+	// Act
+	adapter, err := repositories.NewGormAdapter(dbConfig)
+
+	// Assert
+	suite.Require().Error(err) // Should fail because test DB doesn't exist
+	suite.Require().Nil(adapter)
 }
 
 // ===== METHOD TESTS =====
@@ -74,7 +94,7 @@ func (suite *GormAdapterTestSuite) TestCreateWithRealDB() {
 
 func (suite *GormAdapterTestSuite) TestCreateWithNilDB() {
 	// Arrange
-	adapter := repositories.NewGormAdapter(nil)
+	adapter := repositories.NewGormAdapterFromDB(nil)
 	user := &TestUser{Email: "test@example.com"}
 
 	// Act
@@ -102,7 +122,7 @@ func (suite *GormAdapterTestSuite) TestWhereWithRealDB() {
 
 func (suite *GormAdapterTestSuite) TestWhereWithNilDB() {
 	// Arrange
-	adapter := repositories.NewGormAdapter(nil)
+	adapter := repositories.NewGormAdapterFromDB(nil)
 
 	// Act
 	whereResult := adapter.Where("email = ?", "test@example.com")
@@ -135,7 +155,7 @@ func (suite *GormAdapterTestSuite) TestFirstWithRealDB() {
 
 func (suite *GormAdapterTestSuite) TestFirstWithNilDB() {
 	// Arrange
-	adapter := repositories.NewGormAdapter(nil)
+	adapter := repositories.NewGormAdapterFromDB(nil)
 
 	// Act
 	var foundUser TestUser
@@ -150,7 +170,7 @@ func (suite *GormAdapterTestSuite) TestFirstWithNilDB() {
 
 func (suite *GormAdapterTestSuite) TestGetErrorWithNilDB() {
 	// Arrange
-	adapter := repositories.NewGormAdapter(nil)
+	adapter := repositories.NewGormAdapterFromDB(nil)
 
 	// Act
 	err := adapter.GetError()
@@ -188,7 +208,7 @@ func (suite *GormAdapterTestSuite) TestMethodChaining() {
 
 func (suite *GormAdapterTestSuite) TestCountWithNilDB() {
 	// Arrange
-	adapter := repositories.NewGormAdapter(nil)
+	adapter := repositories.NewGormAdapterFromDB(nil)
 	var count int64
 
 	// Act
@@ -222,7 +242,7 @@ func (suite *GormAdapterTestSuite) TestCountWithRealDB() {
 
 func (suite *GormAdapterTestSuite) TestModelWithNilDB() {
 	// Arrange
-	adapter := repositories.NewGormAdapter(nil)
+	adapter := repositories.NewGormAdapterFromDB(nil)
 
 	// Act
 	result := adapter.Model(&TestUser{})
