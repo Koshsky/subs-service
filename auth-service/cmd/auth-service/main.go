@@ -6,6 +6,7 @@ import (
 
 	"github.com/Koshsky/subs-service/auth-service/internal/authpb"
 	"github.com/Koshsky/subs-service/auth-service/internal/config"
+	"github.com/Koshsky/subs-service/auth-service/internal/messaging"
 	"github.com/Koshsky/subs-service/auth-service/internal/repositories"
 	"github.com/Koshsky/subs-service/auth-service/internal/server"
 	"github.com/Koshsky/subs-service/auth-service/internal/services"
@@ -32,7 +33,7 @@ func main() {
 	}()
 
 	// Initialize RabbitMQ service
-	rabbitmqService, err := services.NewRabbitMQService(cfg)
+	rabbitmqService, err := messaging.NewRabbitMQAdapter(cfg)
 	if err != nil {
 		log.Printf("Warning: Failed to initialize RabbitMQ service: %v", err)
 		log.Printf("Auth service will continue without event publishing")
@@ -41,8 +42,8 @@ func main() {
 		defer rabbitmqService.Close()
 	}
 
-	userRepo := repositories.NewUserRepository(database)
-	authService := services.NewAuthService(userRepo, rabbitmqService, []byte(cfg.JWTSecret))
+	userRepo := repositories.NewUserRepository(repositories.NewGormAdapter(database))
+	authService := services.NewAuthService(userRepo, rabbitmqService, cfg)
 	authServer := server.NewAuthServer(authService)
 
 	var grpcServer *grpc.Server

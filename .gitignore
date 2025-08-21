@@ -7,3 +7,6 @@ certs/
 *.pem
 *.key
 *.crt
+
+*.out
+*.html

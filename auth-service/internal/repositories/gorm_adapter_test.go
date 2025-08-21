@@ -186,6 +186,67 @@ func (suite *GormAdapterTestSuite) TestMethodChaining() {
 	suite.Equal("user2@test.com", foundUser.Email)
 }
 
+func (suite *GormAdapterTestSuite) TestCountWithNilDB() {
+	// Arrange
+	adapter := repositories.NewGormAdapter(nil)
+	var count int64
+
+	// Act
+	result := adapter.Count(&count)
+
+	// Assert
+	suite.Require().NotNil(result)
+	suite.Require().IsType(&repositories.GormAdapter{}, result)
+	suite.Require().Error(result.GetError())
+	suite.Contains(result.GetError().Error(), "database is nil")
+}
+
+func (suite *GormAdapterTestSuite) TestCountWithRealDB() {
+	// Arrange
+	_, adapter := suite.setupTestDB()
+
+	user := &TestUser{Email: "test@example.com"}
+	adapter.Create(user)
+
+	var count int64
+
+	// Act
+	result := adapter.Model(&TestUser{}).Where("email = ?", "test@example.com").Count(&count)
+
+	// Assert
+	suite.Require().NotNil(result)
+	suite.Require().IsType(&repositories.GormAdapter{}, result)
+	suite.Require().NoError(result.GetError())
+	suite.Equal(int64(1), count)
+}
+
+func (suite *GormAdapterTestSuite) TestModelWithNilDB() {
+	// Arrange
+	adapter := repositories.NewGormAdapter(nil)
+
+	// Act
+	result := adapter.Model(&TestUser{})
+
+	// Assert
+	suite.Require().NotNil(result)
+	suite.Require().IsType(&repositories.GormAdapter{}, result)
+	suite.Require().Error(result.GetError())
+	suite.Contains(result.GetError().Error(), "database is nil")
+}
+
+func (suite *GormAdapterTestSuite) TestModelWithRealDB() {
+	// Arrange
+	_, adapter := suite.setupTestDB()
+
+	// Act
+	result := adapter.Model(&TestUser{})
+
+	// Assert
+	suite.Require().NotNil(result)
+	suite.Require().IsType(&repositories.GormAdapter{}, result)
+	suite.Require().NoError(result.GetError())
+}
+
 // Run tests
 func TestGormAdapterTestSuite(t *testing.T) {
 	suite.Run(t, new(GormAdapterTestSuite))

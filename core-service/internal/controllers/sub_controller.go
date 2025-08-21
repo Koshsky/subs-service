@@ -53,8 +53,8 @@ func (c *SubscriptionController) Create(ctx *gin.Context) {
 	var sub models.Subscription
 	if err := ctx.ShouldBindJSON(&sub); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid request body",
-			"details": err.Error(),
+			"GetError": "invalid request body",
+			"details":  err.Error(),
 		})
 		return
 	}
@@ -62,8 +62,8 @@ func (c *SubscriptionController) Create(ctx *gin.Context) {
 	userID, err := getUserIDFromContext(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid user ID",
-			"details": err.Error(),
+			"GetError": "invalid user ID",
+			"details":  err.Error(),
 		})
 		return
 	}
@@ -72,8 +72,8 @@ func (c *SubscriptionController) Create(ctx *gin.Context) {
 	sub, err = c.SubService.Create(sub)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "failed to create subscription",
-			"details": err.Error(),
+			"GetError": "failed to create subscription",
+			"details":  err.Error(),
 		})
 		return
 	}
@@ -86,8 +86,8 @@ func (c *SubscriptionController) Get(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid id format",
-			"details": err.Error(),
+			"GetError": "invalid id format",
+			"details":  err.Error(),
 		})
 		return
 	}
@@ -96,23 +96,23 @@ func (c *SubscriptionController) Get(ctx *gin.Context) {
 
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{
-			"error":   "not found",
-			"details": err.Error(),
+			"GetError": "not found",
+			"details":  err.Error(),
 		})
 		return
 	}
 	userID, err := getUserIDFromContext(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid user ID",
-			"details": err.Error(),
+			"GetError": "invalid user ID",
+			"details":  err.Error(),
 		})
 		return
 	}
 	if sub.UserID != userID {
 		ctx.JSON(http.StatusForbidden, gin.H{
-			"error":   "forbidden",
-			"details": "you are not allowed to access this resource",
+			"GetError": "forbidden",
+			"details":  "you are not allowed to access this resource",
 		})
 		return
 	}
@@ -125,8 +125,8 @@ func (c *SubscriptionController) Update(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid id format",
-			"details": err.Error(),
+			"GetError": "invalid id format",
+			"details":  err.Error(),
 		})
 		return
 	}
@@ -134,8 +134,8 @@ func (c *SubscriptionController) Update(ctx *gin.Context) {
 	var inputSub models.Subscription
 	if err := ctx.ShouldBindJSON(&inputSub); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid request body",
-			"details": err.Error(),
+			"GetError": "invalid request body",
+			"details":  err.Error(),
 		})
 		return
 	}
@@ -143,23 +143,23 @@ func (c *SubscriptionController) Update(ctx *gin.Context) {
 	sub, err := c.SubService.GetByID(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{
-			"error":   "not found",
-			"details": err.Error(),
+			"GetError": "not found",
+			"details":  err.Error(),
 		})
 		return
 	}
 	userID, err := getUserIDFromContext(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid user ID",
-			"details": err.Error(),
+			"GetError": "invalid user ID",
+			"details":  err.Error(),
 		})
 		return
 	}
 	if sub.UserID != userID {
 		ctx.JSON(http.StatusForbidden, gin.H{
-			"error":   "forbidden",
-			"details": "you are not allowed to access this resource",
+			"GetError": "forbidden",
+			"details":  "you are not allowed to access this resource",
 		})
 		return
 	}
@@ -167,8 +167,8 @@ func (c *SubscriptionController) Update(ctx *gin.Context) {
 	updatedSub, err := c.SubService.UpdateByID(id, inputSub)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "failed to update subscription",
-			"details": err.Error(),
+			"GetError": "failed to update subscription",
+			"details":  err.Error(),
 		})
 		return
 	}
@@ -182,16 +182,16 @@ func (c *SubscriptionController) List(ctx *gin.Context) {
 	userID, err := getUserIDFromContext(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid user ID",
-			"details": err.Error(),
+			"GetError": "invalid user ID",
+			"details":  err.Error(),
 		})
 		return
 	}
 	subs, err := c.SubService.GetUserSubscriptions(userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "failed to get subscriptions",
-			"details": err.Error(),
+			"GetError": "failed to get subscriptions",
+			"details":  err.Error(),
 		})
 		return
 	}
@@ -206,8 +206,8 @@ func (c *SubscriptionController) Delete(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid id format",
-			"details": err.Error(),
+			"GetError": "invalid id format",
+			"details":  err.Error(),
 		})
 		return
 	}
@@ -215,31 +215,31 @@ func (c *SubscriptionController) Delete(ctx *gin.Context) {
 	sub, err := c.SubService.GetByID(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{
-			"error":   "not found",
-			"details": err.Error(),
+			"GetError": "not found",
+			"details":  err.Error(),
 		})
 		return
 	}
 	userID, err := getUserIDFromContext(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid user ID",
-			"details": err.Error(),
+			"GetError": "invalid user ID",
+			"details":  err.Error(),
 		})
 		return
 	}
 	if sub.UserID != userID {
 		ctx.JSON(http.StatusForbidden, gin.H{
-			"error":   "forbidden",
-			"details": "you are not allowed to access this resource",
+			"GetError": "forbidden",
+			"details":  "you are not allowed to access this resource",
 		})
 		return
 	}
 
 	if err := c.SubService.DeleteByID(id); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "failed to delete subscription",
-			"details": err.Error(),
+			"GetError": "failed to delete subscription",
+			"details":  err.Error(),
 		})
 		return
 	}

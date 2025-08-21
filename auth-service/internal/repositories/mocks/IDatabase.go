@@ -12,6 +12,26 @@ type IDatabase struct {
 	mock.Mock
 }
 
+// Count provides a mock function with given fields: value
+func (_m *IDatabase) Count(value *int64) repositories.IDatabase {
+	ret := _m.Called(value)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Count")
+	}
+
+	var r0 repositories.IDatabase
+	if rf, ok := ret.Get(0).(func(*int64) repositories.IDatabase); ok {
+		r0 = rf(value)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(repositories.IDatabase)
+		}
+	}
+
+	return r0
+}
+
 // Create provides a mock function with given fields: value
 func (_m *IDatabase) Create(value interface{}) repositories.IDatabase {
 	ret := _m.Called(value)
@@ -68,6 +88,26 @@ func (_m *IDatabase) GetError() error {
 		r0 = rf()
 	} else {
 		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Model provides a mock function with given fields: value
+func (_m *IDatabase) Model(value interface{}) repositories.IDatabase {
+	ret := _m.Called(value)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Model")
+	}
+
+	var r0 repositories.IDatabase
+	if rf, ok := ret.Get(0).(func(interface{}) repositories.IDatabase); ok {
+		r0 = rf(value)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(repositories.IDatabase)
+		}
 	}
 
 	return r0

@@ -37,6 +37,20 @@ func (g *GormAdapter) First(dest interface{}, conds ...interface{}) IDatabase {
 	return &GormAdapter{db: g.db.First(dest, conds...)}
 }
 
+func (g *GormAdapter) Model(value interface{}) IDatabase {
+	if g.db == nil {
+		return &GormAdapter{db: nil}
+	}
+	return &GormAdapter{db: g.db.Model(value)}
+}
+
+func (g *GormAdapter) Count(value *int64) IDatabase {
+	if g.db == nil {
+		return &GormAdapter{db: nil}
+	}
+	return &GormAdapter{db: g.db.Count(value)}
+}
+
 func (g *GormAdapter) GetError() error {
 	if g.db == nil {
 		return errors.New("database is nil")

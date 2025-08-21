@@ -42,7 +42,20 @@ func (ur *UserRepository) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
 	err := ur.DB.Where("email = ?", email).First(&user).GetError()
 	if err != nil {
-		return nil, fmt.Errorf("cannot get user by email=%s: %w", email, err)
+		return nil, err
 	}
 	return &user, nil
+}
+
+func (ur *UserRepository) UserExists(email string) (bool, error) {
+	if ur.DB == nil {
+		return false, errors.New("database connection is not initialized")
+	}
+
+	var count int64
+	err := ur.DB.Model(&models.User{}).Where("email = ?", email).Count(&count).GetError()
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

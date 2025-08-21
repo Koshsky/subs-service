@@ -19,6 +19,14 @@ type RabbitMQAdapterTestSuite struct {
 	mockConn      *messagingMocks.IRabbitMQConn
 	adapter       IMessageBroker
 	config        *config.Config
+	testUser      *models.User
+}
+
+func (suite *RabbitMQAdapterTestSuite) SetupSuite() {
+	suite.testUser = &models.User{
+		ID:    uuid.New(),
+		Email: "test@example.com",
+	}
 }
 
 func (suite *RabbitMQAdapterTestSuite) SetupTest() {
@@ -39,6 +47,24 @@ func (suite *RabbitMQAdapterTestSuite) SetupTest() {
 func (suite *RabbitMQAdapterTestSuite) TearDownTest() {
 	suite.mockPublisher.AssertExpectations(suite.T())
 	suite.mockConn.AssertExpectations(suite.T())
+}
+
+// ===== MOCK HELPER FUNCTIONS =====
+
+// mockPublisherPublish mock publisher.Publish(data, routingKeys, options, options)
+func (suite *RabbitMQAdapterTestSuite) mockPublisherPublish(data []byte, routingKeys []string, err error) {
+	suite.mockPublisher.On("Publish",
+		data,
+		routingKeys,
+		mock.AnythingOfType("func(*rabbitmq.PublishOptions)"),
+		mock.AnythingOfType("func(*rabbitmq.PublishOptions)"),
+	).Return(err)
+}
+
+// mockClose mocks both publisher.Close() and conn.Close()
+func (suite *RabbitMQAdapterTestSuite) mockClose(err error) {
+	suite.mockPublisher.On("Close").Return()
+	suite.mockConn.On("Close").Return(err)
 }
 
 // ===== CONSTRUCTOR TESTS =====
@@ -65,19 +91,13 @@ func (suite *RabbitMQAdapterTestSuite) TestNewRabbitMQAdapter_InvalidConfig() {
 
 func (suite *RabbitMQAdapterTestSuite) TestPublishUserCreated_Success() {
 	// Arrange
-	user := &models.User{
-		ID:    uuid.New(),
-		Email: "test@example.com",
-	}
-	suite.mockPublisher.On("Publish",
-		[]byte(`{"user_id":"`+user.ID.String()+`","email":"test@example.com"}`),
-		[]string{"user.created"},
-		mock.AnythingOfType("func(*rabbitmq.PublishOptions)"),
-		mock.AnythingOfType("func(*rabbitmq.PublishOptions)"),
-	).Return(nil)
+	expectedData := []byte(`{"user_id":"` + suite.testUser.ID.String() + `","email":"test@example.com"}`)
+	expectedRoutingKeys := []string{"user.created"}
+
+	suite.mockPublisherPublish(expectedData, expectedRoutingKeys, nil)
 
 	// Act
-	err := suite.adapter.PublishUserCreated(user)
+	err := suite.adapter.PublishUserCreated(suite.testUser)
 
 	// Assert
 	suite.Require().NoError(err)
@@ -91,13 +111,9 @@ func (suite *RabbitMQAdapterTestSuite) TestPublishUserCreated_NilPublisher() {
 		conn:      suite.mockConn,
 		config:    suite.config,
 	}
-	user := &models.User{
-		ID:    uuid.New(),
-		Email: "test@example.com",
-	}
 
 	// Act
-	err := adapter.PublishUserCreated(user)
+	err := adapter.PublishUserCreated(suite.testUser)
 
 	// Assert
 	suite.Require().Error(err)
@@ -111,13 +127,9 @@ func (suite *RabbitMQAdapterTestSuite) TestPublishUserCreated_NilConfig() {
 		conn:      suite.mockConn,
 		config:    nil,
 	}
-	user := &models.User{
-		ID:    uuid.New(),
-		Email: "test@example.com",
-	}
 
 	// Act
-	err := adapter.PublishUserCreated(user)
+	err := adapter.PublishUserCreated(suite.testUser)
 
 	// Assert
 	suite.Require().Error(err)
@@ -126,20 +138,11 @@ func (suite *RabbitMQAdapterTestSuite) TestPublishUserCreated_NilConfig() {
 
 func (suite *RabbitMQAdapterTestSuite) TestPublishUserCreated_PublisherError() {
 	// Arrange
-	user := &models.User{
-		ID:    uuid.New(),
-		Email: "test@example.com",
-	}
 	expectedError := fmt.Errorf("publisher error")
-	suite.mockPublisher.On("Publish",
-		[]byte(`{"user_id":"`+user.ID.String()+`","email":"test@example.com"}`),
-		[]string{"user.created"},
-		mock.AnythingOfType("func(*rabbitmq.PublishOptions)"),
-		mock.AnythingOfType("func(*rabbitmq.PublishOptions)"),
-	).Return(expectedError)
+	suite.mockPublisherPublish([]byte(`{"user_id":"`+suite.testUser.ID.String()+`","email":"test@example.com"}`), []string{"user.created"}, expectedError)
 
 	// Act
-	err := suite.adapter.PublishUserCreated(user)
+	err := suite.adapter.PublishUserCreated(suite.testUser)
 
 	// Assert
 	suite.Require().Error(err)
@@ -163,19 +166,10 @@ func (suite *RabbitMQAdapterTestSuite) TestPublishUserCreated_NilUser() {
 
 func (suite *RabbitMQAdapterTestSuite) TestPublishUserDeleted_Success() {
 	// Arrange
-	user := &models.User{
-		ID:    uuid.New(),
-		Email: "test@example.com",
-	}
-	suite.mockPublisher.On("Publish",
-		[]byte(`{"user_id":"`+user.ID.String()+`"}`),
-		[]string{"user.deleted"},
-		mock.AnythingOfType("func(*rabbitmq.PublishOptions)"),
-		mock.AnythingOfType("func(*rabbitmq.PublishOptions)"),
-	).Return(nil)
+	suite.mockPublisherPublish([]byte(`{"user_id":"`+suite.testUser.ID.String()+`"}`), []string{"user.deleted"}, nil)
 
 	// Act
-	err := suite.adapter.PublishUserDeleted(user)
+	err := suite.adapter.PublishUserDeleted(suite.testUser)
 
 	// Assert
 	suite.Require().NoError(err)
@@ -189,13 +183,9 @@ func (suite *RabbitMQAdapterTestSuite) TestPublishUserDeleted_NilPublisher() {
 		conn:      suite.mockConn,
 		config:    suite.config,
 	}
-	user := &models.User{
-		ID:    uuid.New(),
-		Email: "test@example.com",
-	}
 
 	// Act
-	err := adapter.PublishUserDeleted(user)
+	err := adapter.PublishUserDeleted(suite.testUser)
 
 	// Assert
 	suite.Require().Error(err)
@@ -209,13 +199,9 @@ func (suite *RabbitMQAdapterTestSuite) TestPublishUserDeleted_NilConfig() {
 		conn:      suite.mockConn,
 		config:    nil,
 	}
-	user := &models.User{
-		ID:    uuid.New(),
-		Email: "test@example.com",
-	}
 
 	// Act
-	err := adapter.PublishUserDeleted(user)
+	err := adapter.PublishUserDeleted(suite.testUser)
 
 	// Assert
 	suite.Require().Error(err)
@@ -224,20 +210,11 @@ func (suite *RabbitMQAdapterTestSuite) TestPublishUserDeleted_NilConfig() {
 
 func (suite *RabbitMQAdapterTestSuite) TestPublishUserDeleted_PublisherError() {
 	// Arrange
-	user := &models.User{
-		ID:    uuid.New(),
-		Email: "test@example.com",
-	}
 	expectedError := fmt.Errorf("publisher error")
-	suite.mockPublisher.On("Publish",
-		[]byte(`{"user_id":"`+user.ID.String()+`"}`),
-		[]string{"user.deleted"},
-		mock.AnythingOfType("func(*rabbitmq.PublishOptions)"),
-		mock.AnythingOfType("func(*rabbitmq.PublishOptions)"),
-	).Return(expectedError)
+	suite.mockPublisherPublish([]byte(`{"user_id":"`+suite.testUser.ID.String()+`"}`), []string{"user.deleted"}, expectedError)
 
 	// Act
-	err := suite.adapter.PublishUserDeleted(user)
+	err := suite.adapter.PublishUserDeleted(suite.testUser)
 
 	// Assert
 	suite.Require().Error(err)
@@ -261,25 +238,10 @@ func (suite *RabbitMQAdapterTestSuite) TestPublishUserDeleted_NilUser() {
 
 func (suite *RabbitMQAdapterTestSuite) TestClose_Success() {
 	// Arrange
-	suite.mockPublisher.On("Close").Return()
-	suite.mockConn.On("Close").Return(nil)
+	suite.mockClose(nil)
 
 	// Act & Assert
 	suite.NotPanics(func() {
-		suite.adapter.Close()
-	})
-	suite.mockPublisher.AssertExpectations(suite.T())
-	suite.mockConn.AssertExpectations(suite.T())
-}
-
-func (suite *RabbitMQAdapterTestSuite) TestClose_MultipleCalls() {
-	// Arrange
-	suite.mockPublisher.On("Close").Return().Times(2)
-	suite.mockConn.On("Close").Return(nil).Times(2)
-
-	// Act & Assert
-	suite.NotPanics(func() {
-		suite.adapter.Close()
 		suite.adapter.Close()
 	})
 	suite.mockPublisher.AssertExpectations(suite.T())

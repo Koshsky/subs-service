@@ -60,29 +60,27 @@ func (_m *IUserRepository) GetUserByEmail(email string) (*models.User, error) {
 	return r0, r1
 }
 
-// ValidateUser provides a mock function with given fields: email, password
-func (_m *IUserRepository) ValidateUser(email string, password string) (*models.User, error) {
-	ret := _m.Called(email, password)
+// UserExists provides a mock function with given fields: email
+func (_m *IUserRepository) UserExists(email string) (bool, error) {
+	ret := _m.Called(email)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ValidateUser")
+		panic("no return value specified for UserExists")
 	}
 
-	var r0 *models.User
+	var r0 bool
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, string) (*models.User, error)); ok {
-		return rf(email, password)
+	if rf, ok := ret.Get(0).(func(string) (bool, error)); ok {
+		return rf(email)
 	}
-	if rf, ok := ret.Get(0).(func(string, string) *models.User); ok {
-		r0 = rf(email, password)
+	if rf, ok := ret.Get(0).(func(string) bool); ok {
+		r0 = rf(email)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*models.User)
-		}
+		r0 = ret.Get(0).(bool)
 	}
 
-	if rf, ok := ret.Get(1).(func(string, string) error); ok {
-		r1 = rf(email, password)
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(email)
 	} else {
 		r1 = ret.Error(1)
 	}

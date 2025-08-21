@@ -1,6 +1,6 @@
 # Моки в тестировании: объяснение и примеры
 
-## 🎯 Для чего используется UserRepositoryInterface мок?
+## 🎯 Для чего используется IUserRepository мок?
 
 ### 📊 Схема архитектуры
 
@@ -49,14 +49,14 @@
 ```go
 func TestRegisterSuccess(t *testing.T) {
     // Arrange
-    mockRepo := new(mocks.UserRepositoryInterface)
+    mockRepo := new(mocks.IUserRepository)
     mockRepo.On("CreateUser", mock.AnythingOfType("*models.User")).Return(nil)
-    
+
     authService := &AuthService{UserRepo: mockRepo}
-    
+
     // Act
     user, err := authService.Register(ctx, "test@example.com", "Password123!")
-    
+
     // Assert
     assert.NoError(t, err)
     assert.Equal(t, "test@example.com", user.Email)
@@ -69,16 +69,16 @@ func TestRegisterSuccess(t *testing.T) {
 ```go
 func TestRegisterDatabaseError(t *testing.T) {
     // Arrange
-    mockRepo := new(mocks.UserRepositoryInterface)
+    mockRepo := new(mocks.IUserRepository)
     mockRepo.On("CreateUser", mock.AnythingOfType("*models.User")).Return(
         errors.New("connection failed"),
     )
-    
+
     authService := &AuthService{UserRepo: mockRepo}
-    
+
     // Act
     user, err := authService.Register(ctx, "test@example.com", "Password123!")
-    
+
     // Assert
     assert.Error(t, err)
     assert.Nil(t, user)
@@ -91,16 +91,16 @@ func TestRegisterDatabaseError(t *testing.T) {
 ```go
 func TestLoginValidation(t *testing.T) {
     // Arrange
-    mockRepo := new(mocks.UserRepositoryInterface)
+    mockRepo := new(mocks.IUserRepository)
     mockRepo.On("ValidateUser", "test@example.com", "Password123!").Return(
         &models.User{Email: "test@example.com"}, nil,
     )
-    
+
     authService := &AuthService{UserRepo: mockRepo, JWTSecret: []byte("secret")}
-    
+
     // Act
     token, user, err := authService.Login(ctx, "test@example.com", "Password123!")
-    
+
     // Assert
     assert.NoError(t, err)
     assert.NotEmpty(t, token)
@@ -108,14 +108,14 @@ func TestLoginValidation(t *testing.T) {
 }
 ```
 
-## 🔄 Разница между DatabaseInterface и UserRepositoryInterface моками
+## 🔄 Разница между IDatabase и IUserRepository моками
 
-### DatabaseInterface мок
+### IDatabase мок
 - **Используется для:** тестирования UserRepository
 - **Что мокает:** низкоуровневые операции БД (Create, Where, First, Error)
 - **Когда нужен:** когда тестируем логику репозитория
 
-### UserRepositoryInterface мок
+### IUserRepository мок
 - **Используется для:** тестирования AuthService
 - **Что мокает:** высокоуровневые операции (CreateUser, GetUserByEmail, ValidateUser)
 - **Когда нужен:** когда тестируем бизнес-логику сервиса
@@ -138,7 +138,7 @@ func TestLoginValidation(t *testing.T) {
 ### 1. Dependency Injection
 ```go
 type AuthService struct {
-    UserRepo UserRepositoryInterface // Интерфейс вместо конкретного типа
+    UserRepo IUserRepository // Интерфейс вместо конкретного типа
 }
 ```
 
