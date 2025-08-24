@@ -80,13 +80,6 @@ TLS_KEY_FILE=certs/server-key.pem
 # DOCKER-COMPOSE ONLY VARIABLES (not used in Go code)
 # =============================================================================
 
-# Cookie Configuration (used only in docker-compose.yaml)
-COOKIE_DOMAIN=
-COOKIE_MAX_AGE=
-
-# JWT Expiration (used only in docker-compose.yaml)
-JWT_EXPIRATION=
-
 EOF
 
 echo "✅ .env file created successfully!"

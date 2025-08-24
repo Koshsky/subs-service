@@ -1,12 +1,8 @@
 package config
 
 import (
-	"fmt"
-
 	"github.com/Koshsky/subs-service/auth-service/internal/utils"
 	"github.com/joho/godotenv"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 type DBConfig struct {
@@ -16,11 +12,6 @@ type DBConfig struct {
 	Password string
 	DBName   string
 	SSLMode  string
-}
-
-func (db *DBConfig) ConnectionString() string {
-	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		db.Host, db.Port, db.User, db.Password, db.DBName, db.SSLMode)
 }
 
 type RabbitMQConfig struct {
@@ -64,8 +55,4 @@ func LoadConfig() *Config {
 		TLSKeyFile:  utils.GetEnv("TLS_KEY_FILE", "certs/server-key.pem"),
 		EnableTLS:   utils.GetEnvBool("ENABLE_TLS", false),
 	}
-}
-
-func (c *Config) ConnectDB() (*gorm.DB, error) {
-	return gorm.Open(postgres.Open(c.Database.ConnectionString()), &gorm.Config{})
 }

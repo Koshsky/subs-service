@@ -7,8 +7,6 @@ info:
 tags:
   - name: Subscriptions
     description: Операции с подписками пользователей
-  - name: Analytics
-    description: Аналитические данные по подпискам
 
 servers:
   - url: http://localhost:8080
@@ -248,73 +246,6 @@ paths:
                 value:
                   error: "not found"
                   details: "subscription with id=5 not found"
-
-  /subscriptions/total:
-    get:
-      tags: ["Analytics"]
-      summary: Получить сумму подписок по фильтрам
-      description: Возвращает суммарную стоимость подписок за указанный период с возможностью фильтрации
-      parameters:
-        - name: user_id
-          in: query
-          description: ID пользователя (UUID)
-          schema:
-            type: string
-            format: uuid
-          example: "60601fee-2bf1-4721-ae6f-7636e79a0cba"
-        - name: service
-          in: query
-          description: Название сервиса
-          schema:
-            type: string
-          example: "Yandex Plus"
-        - name: start_month
-          in: query
-          required: true
-          description: Начальный месяц в формате MM-YYYY
-          schema:
-            type: string
-            pattern: '^\d{2}-\d{4}$'
-          example: "07-2025"
-        - name: end_month
-          in: query
-          required: true
-          description: Конечный месяц в формате MM-YYYY
-          schema:
-            type: string
-            pattern: '^\d{2}-\d{4}$'
-          example: "07-2027"
-      responses:
-        '200':
-          description: Сумма подписок
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  total:
-                    type: number
-                    description: Общая сумма всех подписок (в рублях)
-                    example: 699
-              examples:
-                TotalAmount:
-                  value:
-                    total: 1098
-        '400':
-          description: Ошибка параметров
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  details:
-                    type: string
-              example:
-                value:
-                  error: "invalid start month format"
-                  details: "invalid date format, expected MM-YYYY"
 
 components:
   schemas:

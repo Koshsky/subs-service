@@ -105,7 +105,7 @@ message LoginResponse {
 
 ```go
 type AuthServer struct {
-    authpb.UnimplementedAuthServiceServer  // Встроенная структура для совместимости
+    authpb.UnimplementedAuthServiceServer   // Встроенная структура для совместимости
     AuthService *services.AuthService       // Бизнес-логика
 }
 
@@ -159,14 +159,14 @@ func (s *AuthServer) ValidateToken(ctx context.Context, req *authpb.TokenRequest
 ```go
 func (s *AuthServer) Register(ctx context.Context, req *authpb.RegisterRequest) (*authpb.RegisterResponse, error) {
     startTime := time.Now()
-    log.Printf("[AUTH_SERVER] [%s] Starting Register gRPC handler for email: %s", 
+    log.Printf("[AUTH_SERVER] [%s] Starting Register gRPC handler for email: %s",
         startTime.Format("15:04:05.000"), req.Email)
 
     user, err := s.AuthService.Register(ctx, req.Email, req.Password)
 
     if err != nil {
         totalDuration := time.Since(startTime)
-        log.Printf("[AUTH_SERVER] [%s] Register FAILED after %v (service error: %v)", 
+        log.Printf("[AUTH_SERVER] [%s] Register FAILED after %v (service error: %v)",
             time.Now().Format("15:04:05.000"), totalDuration, err)
         return &authpb.RegisterResponse{
             Success: false,
@@ -182,7 +182,7 @@ func (s *AuthServer) Register(ctx context.Context, req *authpb.RegisterRequest) 
     }
 
     totalDuration := time.Since(startTime)
-    log.Printf("[AUTH_SERVER] [%s] Register SUCCESS in %v", 
+    log.Printf("[AUTH_SERVER] [%s] Register SUCCESS in %v",
         time.Now().Format("15:04:05.000"), totalDuration)
 
     return response, nil
@@ -336,14 +336,14 @@ func LoggingInterceptor(ctx context.Context, req interface{}, info *grpc.UnarySe
 ```go
 func AuthInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
     // Пропускаем аутентификацию для методов регистрации и логина
-    if info.FullMethod == "/authpb.AuthService/Register" || 
+    if info.FullMethod == "/authpb.AuthService/Register" ||
        info.FullMethod == "/authpb.AuthService/Login" {
         return handler(ctx, req)
     }
-    
+
     // Проверяем токен для остальных методов
     // ... логика проверки токена ...
-    
+
     return handler(ctx, req)
 }
 ```
@@ -362,12 +362,12 @@ func (s *AuthServer) ValidateToken(ctx context.Context, req *authpb.TokenRequest
     if req.Token == "" {
         return nil, status.Error(codes.InvalidArgument, "token is required")
     }
-    
+
     claims, err := s.AuthService.ValidateToken(ctx, req.Token)
     if err != nil {
         return nil, status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
     }
-    
+
     // ... остальная логика ...
 }
 ```
@@ -388,11 +388,11 @@ func (s *AuthServer) Register(ctx context.Context, req *authpb.RegisterRequest) 
     if req.Email == "" {
         return nil, status.Error(codes.InvalidArgument, "email is required")
     }
-    
+
     if req.Password == "" {
         return nil, status.Error(codes.InvalidArgument, "password is required")
     }
-    
+
     // ... остальная логика ...
 }
 ```
@@ -453,11 +453,11 @@ import (
 
 func main() {
     // ... инициализация сервера ...
-    
+
     healthServer := health.NewServer()
     grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
     healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
-    
+
     // ... запуск сервера ...
 }
 ```
@@ -473,12 +473,12 @@ import (
 func main() {
     // Регистрируем метрики
     grpc_prometheus.EnableHandlingTimeHistogram()
-    
+
     // Создаем сервер с метриками
     grpcServer := grpc.NewServer(
         grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
     )
-    
+
     // Регистрируем метрики в Prometheus
     prometheus.MustRegister(grpc_prometheus.DefaultServerMetrics)
 }
@@ -514,7 +514,7 @@ func main() {
 ```protobuf
 service AuthService {
   // ... существующие методы ...
-  
+
   // New method
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
 }
@@ -549,7 +549,7 @@ func (a *AuthClient) UpdateUser(ctx context.Context, userID, email string) (*aut
         UserId: userID,
         Email:  email,
     }
-    
+
     return a.client.UpdateUser(ctx, req)
 }
 ```

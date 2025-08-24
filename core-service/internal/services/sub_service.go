@@ -38,18 +38,3 @@ func (s *SubscriptionService) UpdateByID(id int, update models.Subscription) (mo
 func (s *SubscriptionService) DeleteByID(id int) error {
 	return s.SubRepo.DeleteByID(uint(id))
 }
-
-// SumPrice sums the price of subscriptions for a user
-func (s *SubscriptionService) SumPrice(params models.SubscriptionFilter) (int, error) {
-	subs, err := s.SubRepo.GetBySubscriptionFilter(params)
-	if err != nil {
-		return 0, err
-	}
-
-	var total int
-	for _, sub := range subs {
-		total += sub.Price
-	}
-
-	return total, nil
-}

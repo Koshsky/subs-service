@@ -17,7 +17,7 @@ func AuthMiddleware(validateToken ValidateTokenFunc) gin.HandlerFunc {
 		tokenString, err := c.Cookie("auth_token")
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "Authorization required",
+				"GetError": "Authorization required",
 			})
 			return
 		}
@@ -25,16 +25,16 @@ func AuthMiddleware(validateToken ValidateTokenFunc) gin.HandlerFunc {
 		resp, err := validateToken(c.Request.Context(), tokenString)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error":   "Invalid token",
-				"details": err.Error(),
+				"GetError": "Invalid token",
+				"details":  err.Error(),
 			})
 			return
 		}
 
 		if !resp.Valid {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error":   "Invalid token",
-				"details": resp.Error,
+				"GetError": "Invalid token",
+				"details":  resp.Error,
 			})
 			return
 		}

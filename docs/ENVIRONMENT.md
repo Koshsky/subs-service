@@ -47,13 +47,6 @@ These variables **MUST** be set and **CANNOT** have default values in production
 | `RABBITMQ_EXCHANGE` | RabbitMQ exchange name | Non-empty | `user_events` |
 | `RABBITMQ_QUEUE` | RabbitMQ queue name | Non-empty | `user_created` |
 
-### Cookie Configuration
-
-| Variable | Description | Validation | Example |
-|----------|-------------|------------|---------|
-| `COOKIE_DOMAIN` | Cookie domain | Non-empty | `localhost` |
-| `COOKIE_MAX_AGE` | Cookie max age in seconds | Positive integer | `3600` |
-
 ### TLS Configuration
 
 | Variable | Description | Validation | Example |
@@ -84,12 +77,6 @@ These variables can have default values:
 |----------|-------------|---------|
 | `RABBITMQ_HOST` | RabbitMQ host | `rabbitmq` |
 
-### Timeouts and Limits
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `JWT_EXPIRATION` | JWT token expiration | `24h` |
-
 ### TLS Configuration
 
 | Variable | Description | Default |
@@ -101,13 +88,13 @@ These variables can have default values:
 
 ### Development Setup
 
-For development, you can use the provided script to create a `.env` file with default values:
+For development, you can create a `.env` file with default values:
 
 ```bash
-./scripts/create-env.sh
+./scripts/generate-env.sh
 ```
 
-This will create a `.env` file with development-friendly default values.
+This will create a `.env` file with development-friendly default values that you can then customize.
 
 ### Production Setup
 
@@ -149,10 +136,6 @@ RABBITMQ_USER=rabbitmq_user
 RABBITMQ_EXCHANGE=user_events
 RABBITMQ_QUEUE=user_created
 
-# Cookie Configuration
-COOKIE_DOMAIN=yourdomain.com
-COOKIE_MAX_AGE=3600
-
 # TLS Configuration
 ENABLE_TLS=true
 ```
@@ -163,10 +146,10 @@ The system includes comprehensive validation for environment variables:
 
 ### Build-Time Validation
 
-The build script automatically validates environment variables:
+You can validate environment variables manually:
 
 ```bash
-./scripts/build.sh
+./scripts/validate-env.sh
 ```
 
 This will:

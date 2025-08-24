@@ -2,10 +2,7 @@
 
 ## Запуск сервисов
 ```bash
-# Сборка и запуск всех сервисов
-./scripts/build.sh
-
-# Или только запуск (если образы уже собраны)
+# Запуск всех сервисов
 docker-compose up -d
 
 # Проверка статуса
@@ -86,21 +83,6 @@ curl -X DELETE http://localhost:8080/api/subscriptions/1 \
      -b cookies.txt | jq
 ```
 
-### 8. Получить аналитику (сумму подписок)
-```bash
-# Общая сумма всех активных подписок
-curl -b cookies.txt \
-     http://localhost:8080/api/analytics/total | jq
-
-# С фильтрами (если поддерживается)
-SERVICE="Yandex%20Plus"
-START_MONTH="07-2025"
-END_MONTH="07-2025"
-
-curl -b cookies.txt \
-  "http://localhost:8080/api/analytics/total?service=${SERVICE}&start_month=${START_MONTH}&end_month=${END_MONTH}" | jq
-```
-
 ## Структура данных
 
 ### Пользователь
@@ -160,10 +142,3 @@ docker-compose down
 # Остановка с удалением volumes (полная очистка)
 docker-compose down -v
 ```
-
-## Изменения от исходного README
-
-1. **Обновлены пути**: добавлены префиксы `/auth` и `/api`
-2. **Добавлены скрипты тестирования**: `quick-test.sh` и `test-api.sh`
-3. **Обновлена структура endpoint'ов**: аналитика в `/api/analytics/`
-4. **Добавлены примеры отладки и логирования**

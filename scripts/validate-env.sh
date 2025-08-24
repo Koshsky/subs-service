@@ -178,7 +178,7 @@ main() {
     # Check if .env file exists
     if [ ! -f .env ]; then
         echo "❌ CRITICAL ERROR: .env file not found"
-        echo "   Run: ./scripts/create-env.sh"
+        echo "   Run: ./scripts/generate-env.sh"
         exit 1
     fi
 
@@ -267,7 +267,7 @@ main() {
 
     if [ "$errors_found" = true ]; then
         echo "❌ Validation failed - please fix the errors above"
-        echo "💡 Run ./scripts/create-env.sh to regenerate with correct values"
+        echo "💡 Run ./scripts/generate-env.sh to regenerate with correct values"
         exit $exit_code
     else
         echo "✅ All validations passed!"

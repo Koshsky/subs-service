@@ -46,11 +46,6 @@ func SetupRouter(
 			subscriptions.DELETE("/:id", subController.Delete)
 		}
 
-		// Analytics routes
-		analytics := api.Group("/analytics")
-		{
-			analytics.GET("/total", subController.SumPrice)
-		}
 	}
 
 	// for debugging

@@ -143,14 +143,7 @@ echo "Response:"
 print_response "$UPDATE_RESPONSE"
 
 echo
-echo "9️⃣  Getting the total amount of all subscriptions..."
 
-TOTAL_RESPONSE=$(curl -s -b "$COOKIES_FILE" "$API_URL/api/analytics/total?start_month=01-2025&end_month=12-2025")
-
-echo "Response:"
-print_response "$TOTAL_RESPONSE"
-
-echo
 echo "🔟  Deleting a subscription ID=$SUB2_ID..."
 
 DELETE_RESPONSE=$(curl -s -X DELETE "$API_URL/api/subscriptions/$SUB2_ID" -b "$COOKIES_FILE")
@@ -189,7 +182,6 @@ echo "- Creating a Netflix subscription: $(if echo "$SUB2_RESPONSE" | jq -e '.ID
 echo "- Getting subscriptions: $(if echo "$ALL_SUBS_RESPONSE" | jq -e '.[0]' > /dev/null 2>&1; then echo "✅ Success"; else echo "❌ Error"; fi)"
 echo "- Getting a subscription by ID: $(if echo "$SUB_BY_ID_RESPONSE" | jq -e '.ID' > /dev/null 2>&1; then echo "✅ Success"; else echo "❌ Error"; fi)"
 echo "- Updating a subscription: $(if echo "$UPDATE_RESPONSE" | jq -e '.ID' > /dev/null 2>&1; then echo "✅ Success"; else echo "❌ Error"; fi)"
-echo "- Getting analytics: $(if echo "$TOTAL_RESPONSE" | jq -e '.total_price' > /dev/null 2>&1; then echo "✅ Success"; else echo "❌ Error"; fi)"
 echo "- Deleting a subscription: $(if echo "$DELETE_RESPONSE" | jq -e '.message' > /dev/null 2>&1; then echo "✅ Success"; else echo "❌ Error"; fi)"
 echo "- Final check of subscriptions: $(if echo "$FINAL_SUBS_RESPONSE" | jq -e '.[0]' > /dev/null 2>&1; then echo "✅ Success"; else echo "❌ Error"; fi)"
 echo "- User.created event: $(if echo "$REGISTER_RESPONSE" | jq -e '.user' > /dev/null 2>&1; then echo "✅ Sent to RabbitMQ"; else echo "❌ Not sent"; fi)"
