@@ -18,7 +18,7 @@ type RabbitMQAdapterTestSuite struct {
 	mockPublisher *messagingMocks.IRabbitMQPublisher
 	mockConn      *messagingMocks.IRabbitMQConn
 	adapter       IMessageBroker
-	config        *config.Config
+	config        config.RabbitMQConfig
 	testUser      *models.User
 }
 
@@ -30,10 +30,8 @@ func (suite *RabbitMQAdapterTestSuite) SetupSuite() {
 }
 
 func (suite *RabbitMQAdapterTestSuite) SetupTest() {
-	suite.config = &config.Config{
-		RabbitMQ: config.RabbitMQConfig{
-			Exchange: "test_exchange",
-		},
+	suite.config = config.RabbitMQConfig{
+		Exchange: "test_exchange",
 	}
 	suite.mockPublisher = messagingMocks.NewIRabbitMQPublisher(suite.T())
 	suite.mockConn = messagingMocks.NewIRabbitMQConn(suite.T())
@@ -71,11 +69,9 @@ func (suite *RabbitMQAdapterTestSuite) mockClose(err error) {
 
 func (suite *RabbitMQAdapterTestSuite) TestNewRabbitMQAdapter_InvalidConfig() {
 	// Arrange
-	cfg := &config.Config{
-		RabbitMQ: config.RabbitMQConfig{
-			URL:      "invalid://url",
-			Exchange: "test_exchange",
-		},
+	cfg := config.RabbitMQConfig{
+		URL:      "invalid://url",
+		Exchange: "test_exchange",
 	}
 
 	// Act
@@ -118,22 +114,6 @@ func (suite *RabbitMQAdapterTestSuite) TestPublishUserCreated_NilPublisher() {
 	// Assert
 	suite.Require().Error(err)
 	suite.Contains(err.Error(), "publisher is not initialized")
-}
-
-func (suite *RabbitMQAdapterTestSuite) TestPublishUserCreated_NilConfig() {
-	// Arrange
-	adapter := &RabbitMQAdapter{
-		publisher: suite.mockPublisher,
-		conn:      suite.mockConn,
-		config:    nil,
-	}
-
-	// Act
-	err := adapter.PublishUserCreated(suite.testUser)
-
-	// Assert
-	suite.Require().Error(err)
-	suite.Contains(err.Error(), "config is not initialized")
 }
 
 func (suite *RabbitMQAdapterTestSuite) TestPublishUserCreated_PublisherError() {
@@ -190,22 +170,6 @@ func (suite *RabbitMQAdapterTestSuite) TestPublishUserDeleted_NilPublisher() {
 	// Assert
 	suite.Require().Error(err)
 	suite.Contains(err.Error(), "publisher is not initialized")
-}
-
-func (suite *RabbitMQAdapterTestSuite) TestPublishUserDeleted_NilConfig() {
-	// Arrange
-	adapter := &RabbitMQAdapter{
-		publisher: suite.mockPublisher,
-		conn:      suite.mockConn,
-		config:    nil,
-	}
-
-	// Act
-	err := adapter.PublishUserDeleted(suite.testUser)
-
-	// Assert
-	suite.Require().Error(err)
-	suite.Contains(err.Error(), "config is not initialized")
 }
 
 func (suite *RabbitMQAdapterTestSuite) TestPublishUserDeleted_PublisherError() {

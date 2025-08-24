@@ -15,7 +15,7 @@ import (
 type RabbitMQAdapter struct {
 	publisher IRabbitMQPublisher
 	conn      IRabbitMQConn
-	config    *config.Config
+	config    config.RabbitMQConfig
 }
 
 type UserCreatedEvent struct {
@@ -28,10 +28,10 @@ type UserDeletedEvent struct {
 }
 
 // NewRabbitMQAdapter creates a new RabbitMQ adapter
-func NewRabbitMQAdapter(cfg *config.Config) (IMessageBroker, error) {
+func NewRabbitMQAdapter(rabbitmqConfig config.RabbitMQConfig) (IMessageBroker, error) {
 	// Create connection with automatic reconnection
 	conn, err := rabbitmq.NewConn(
-		cfg.RabbitMQ.URL,
+		rabbitmqConfig.URL,
 		rabbitmq.WithConnectionOptionsLogging,
 		rabbitmq.WithConnectionOptionsReconnectInterval(5), // 5 seconds between reconnection attempts
 	)
@@ -43,7 +43,7 @@ func NewRabbitMQAdapter(cfg *config.Config) (IMessageBroker, error) {
 	publisher, err := rabbitmq.NewPublisher(
 		conn,
 		rabbitmq.WithPublisherOptionsLogging,
-		rabbitmq.WithPublisherOptionsExchangeName(cfg.RabbitMQ.Exchange),
+		rabbitmq.WithPublisherOptionsExchangeName(rabbitmqConfig.Exchange),
 		rabbitmq.WithPublisherOptionsExchangeDeclare,
 		rabbitmq.WithPublisherOptionsExchangeKind("topic"),
 		rabbitmq.WithPublisherOptionsExchangeDurable,
@@ -56,7 +56,7 @@ func NewRabbitMQAdapter(cfg *config.Config) (IMessageBroker, error) {
 	return &RabbitMQAdapter{
 		publisher: publisher,
 		conn:      conn,
-		config:    cfg,
+		config:    rabbitmqConfig,
 	}, nil
 }
 
@@ -65,9 +65,7 @@ func (r *RabbitMQAdapter) PublishUserCreated(user *models.User) error {
 	if r.publisher == nil {
 		return errors.New("publisher is not initialized")
 	}
-	if r.config == nil {
-		return errors.New("config is not initialized")
-	}
+
 	if user == nil {
 		return errors.New("user cannot be nil")
 	}
@@ -86,7 +84,7 @@ func (r *RabbitMQAdapter) PublishUserCreated(user *models.User) error {
 		body,
 		[]string{"user.created"},
 		rabbitmq.WithPublishOptionsContentType("application/json"),
-		rabbitmq.WithPublishOptionsExchange(r.config.RabbitMQ.Exchange),
+		rabbitmq.WithPublishOptionsExchange(r.config.Exchange),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to publish user created event: %v", err)
@@ -99,9 +97,7 @@ func (r *RabbitMQAdapter) PublishUserDeleted(user *models.User) error {
 	if r.publisher == nil {
 		return errors.New("publisher is not initialized")
 	}
-	if r.config == nil {
-		return errors.New("config is not initialized")
-	}
+
 	if user == nil {
 		return errors.New("user cannot be nil")
 	}
@@ -119,7 +115,7 @@ func (r *RabbitMQAdapter) PublishUserDeleted(user *models.User) error {
 		body,
 		[]string{"user.deleted"},
 		rabbitmq.WithPublishOptionsContentType("application/json"),
-		rabbitmq.WithPublishOptionsExchange(r.config.RabbitMQ.Exchange),
+		rabbitmq.WithPublishOptionsExchange(r.config.Exchange),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to publish user deleted event: %v", err)
